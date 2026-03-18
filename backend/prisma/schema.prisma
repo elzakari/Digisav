@@ -1,0 +1,723 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                      String                      @id @default(uuid()) @db.Uuid
+  email                   String                      @unique @db.VarChar(255)
+  phoneNumber             String                      @unique @db.VarChar(20)
+  passwordHash            String                      @db.VarChar(255)
+  fullName                String                      @db.VarChar(100)
+  status                  UserStatus                  @default(ACTIVE)
+  role                    UserRole                    @default(MEMBER)
+  emailVerified           Boolean                     @default(false)
+  phoneVerified           Boolean                     @default(false)
+  lastLogin               DateTime?
+  createdAt               DateTime                    @default(now())
+  updatedAt               DateTime                    @updatedAt
+  recordedContributions   Contribution[]              @relation("ContributionRecorder")
+  adminGroups             Group[]                     @relation("GroupAdmin")
+  memberships             Member[]
+  notifications           Notification[]
+  passwordResetTokens     PasswordResetToken[]
+  refreshTokens           RefreshToken[]
+  processedWithdrawals    WithdrawalRequest[]         @relation("WithdrawalProcessor")
+  recordedTransactions    Transaction[]               @relation("TransactionRecorder")
+  savingsGoals            SavingsGoal[]
+  savingsDeposits         SavingsDeposit[]
+  savingsAutomations      SavingsAutomation[]
+  createdChallenges       SavingsChallenge[]
+  challengeParticipations ChallengeParticipation[]
+  savingsAnalytics        SavingsAnalytics[]
+  investmentAccounts      InvestmentAccount[]
+  portfolios              Portfolio[]
+  roboRecommendations     RoboAdvisorRecommendation[]
+  optedOutOfGroupSavings  Boolean                     @default(false)
+  language                String                      @default("en") @db.VarChar(10)
+  theme                   String                      @default("dark") @db.VarChar(20)
+  defaultCurrency         String                      @default("KES") @db.VarChar(3)
+
+  @@index([email])
+  @@index([phoneNumber])
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  token     String   @unique @db.VarChar(500)
+  userId    String   @db.Uuid
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@map("refresh_tokens")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  token     String   @unique @db.VarChar(500)
+  userId    String   @db.Uuid
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
+
+model Group {
+  id                  String              @id @default(uuid()) @db.Uuid
+  groupName           String              @db.VarChar(100)
+  groupPrefix         String              @unique @db.VarChar(10)
+  adminUserId         String              @db.Uuid
+  contributionAmount  Decimal             @db.Decimal(12, 2)
+  currencyCode        String              @db.VarChar(3)
+  paymentFrequency    PaymentFrequency
+  customFrequencyDays Int?
+  maxMembers          Int
+  payoutOrderType     PayoutOrderType
+  startDate           DateTime?
+  status              GroupStatus         @default(DRAFT)
+  gracePeriodDays     Int                 @default(0)
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  contributions       Contribution[]
+  admin               User                @relation("GroupAdmin", fields: [adminUserId], references: [id])
+  invitations         Invitation[]
+  members             Member[]
+  messages            Message[]
+  transactions        Transaction[]
+  savingsGoals        SavingsGoal[]
+  withdrawalRequests  WithdrawalRequest[]
+  investmentAccounts  InvestmentAccount[]
+
+  groupFeePercentage    Decimal @default(0) @db.Decimal(5, 2)
+  platformFeePercentage Decimal @default(2.00) @db.Decimal(5, 2)
+  allowMicroInvestments Boolean @default(true)
+
+  @@index([adminUserId])
+  @@index([status])
+  @@map("groups")
+}
+
+model Member {
+  id                      String              @id @default(uuid()) @db.Uuid
+  userId                  String              @db.Uuid
+  groupId                 String              @db.Uuid
+  accountNumber           String              @unique @db.VarChar(20)
+  nationalId              String              @db.VarChar(50)
+  photoUrl                String?             @db.VarChar(500)
+  dateOfBirth             DateTime?
+  joinDate                DateTime            @default(now())
+  status                  MemberStatus        @default(PENDING)
+  payoutPosition          Int?
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+  optInMessaging          Boolean             @default(true)
+  isSavingsGroupMember    Boolean             @default(true)
+  isMicroSavingsMember    Boolean             @default(false)
+  isMicroInvestmentMember Boolean             @default(false)
+  isCurrentInAll          Boolean             @default(false)
+  contributions           Contribution[]
+  group                   Group               @relation(fields: [groupId], references: [id])
+  user                    User                @relation(fields: [userId], references: [id])
+  messages                Message[]
+  transactions            Transaction[]
+  withdrawalRequests      WithdrawalRequest[]
+
+  @@unique([groupId, userId])
+  @@unique([groupId, nationalId])
+  @@index([groupId])
+  @@index([userId])
+  @@index([status])
+  @@map("members")
+}
+
+model Invitation {
+  id             String   @id @default(uuid()) @db.Uuid
+  groupId        String   @db.Uuid
+  token          String   @unique @db.VarChar(100)
+  maxUses        Int      @default(1)
+  usedCount      Int      @default(0)
+  expiresAt      DateTime
+  recipientPhone String?  @db.VarChar(20)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  group          Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@index([groupId])
+  @@index([token])
+  @@map("invitations")
+}
+
+model Contribution {
+  id              String             @id @default(uuid()) @db.Uuid
+  memberId        String             @db.Uuid
+  groupId         String             @db.Uuid
+  amount          Decimal            @db.Decimal(12, 2)
+  currencyCode    String             @db.VarChar(3)
+  paymentDate     DateTime
+  dueDate         DateTime
+  cycleNumber     Int
+  paymentMethod   PaymentMethod
+  referenceNumber String?            @db.VarChar(100)
+  recordedBy      String             @db.Uuid
+  notes           String?
+  status          ContributionStatus @default(COMPLETED)
+  hash            String             @db.VarChar(64)
+  createdAt       DateTime           @default(now())
+  group           Group              @relation(fields: [groupId], references: [id])
+  member          Member             @relation(fields: [memberId], references: [id])
+  recorder        User               @relation("ContributionRecorder", fields: [recordedBy], references: [id])
+
+  @@unique([groupId, memberId, cycleNumber])
+  @@index([groupId, cycleNumber])
+  @@index([memberId])
+  @@index([paymentDate])
+  @@index([status])
+  @@map("contributions")
+}
+
+model Transaction {
+  id              String          @id @default(uuid()) @db.Uuid
+  groupId         String          @db.Uuid
+  memberId        String?         @db.Uuid
+  transactionType TransactionType
+  amount          Decimal         @db.Decimal(12, 2)
+  currencyCode    String          @db.VarChar(3)
+  referenceId     String?         @db.Uuid
+  recordedBy      String          @db.Uuid
+  timestamp       DateTime        @default(now())
+  hash            String          @db.VarChar(64)
+  previousHash    String?         @db.VarChar(64)
+  metadata        Json?
+  createdAt       DateTime        @default(now())
+  group           Group           @relation(fields: [groupId], references: [id])
+  member          Member?         @relation(fields: [memberId], references: [id])
+  recorder        User            @relation("TransactionRecorder", fields: [recordedBy], references: [id])
+
+  @@index([groupId, timestamp])
+  @@index([memberId])
+  @@index([transactionType])
+  @@map("transactions")
+}
+
+model Message {
+  id             String         @id @default(uuid()) @db.Uuid
+  groupId        String         @db.Uuid
+  memberId       String?        @db.Uuid
+  messageType    String         @db.VarChar(50)
+  channel        MessageChannel
+  recipientPhone String         @db.VarChar(20)
+  messageBody    String
+  templateId     String?        @db.VarChar(50)
+  deliveryStatus DeliveryStatus @default(PENDING)
+  sentAt         DateTime?
+  deliveredAt    DateTime?
+  readAt         DateTime?
+  errorMessage   String?
+  createdAt      DateTime       @default(now())
+  externalId     String?        @unique @db.VarChar(100)
+  group          Group          @relation(fields: [groupId], references: [id])
+  member         Member?        @relation(fields: [memberId], references: [id])
+
+  @@index([groupId, sentAt])
+  @@index([memberId])
+  @@index([deliveryStatus])
+  @@map("messages")
+}
+
+enum UserRole {
+  SYS_ADMIN
+  ADMIN
+  MEMBER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum MemberStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  INACTIVE
+}
+
+enum GroupStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  CLOSED
+}
+
+enum PaymentFrequency {
+  DAILY
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+  CUSTOM
+}
+
+enum PayoutOrderType {
+  MANUAL
+  RANDOM
+  ROTATION
+}
+
+enum PaymentMethod {
+  CASH
+  MOBILE_MONEY
+  BANK_TRANSFER
+}
+
+enum ContributionStatus {
+  PENDING
+  COMPLETED
+  OVERDUE
+  DEFAULTED
+}
+
+enum TransactionType {
+  CONTRIBUTION
+  PAYOUT
+  FEE
+  ADJUSTMENT
+}
+
+enum MessageChannel {
+  SMS
+  WHATSAPP
+  EMAIL
+}
+
+enum DeliveryStatus {
+  PENDING
+  SENT
+  DELIVERED
+  FAILED
+  READ
+}
+
+model Notification {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  groupId   String?  @db.Uuid
+  type      String   @db.VarChar(50)
+  title     String   @db.VarChar(200)
+  body      String   @db.VarChar(500)
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+model SavingsGoal {
+  id            String              @id @default(uuid()) @db.Uuid
+  userId        String              @db.Uuid
+  name          String              @db.VarChar(100)
+  description   String?             @db.Text
+  targetAmount  Decimal             @db.Decimal(12, 2)
+  currentAmount Decimal             @default(0) @db.Decimal(12, 2)
+  currencyCode  String              @db.VarChar(3)
+  targetDate    DateTime?
+  category      SavingsGoalCategory
+  status        SavingsGoalStatus   @default(ACTIVE)
+  isPublic      Boolean             @default(false)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  withdrawnAmount Decimal?  @db.Decimal(12, 2)
+  adminFeeApplied Decimal?  @db.Decimal(12, 2)
+  withdrawnAt     DateTime?
+
+  user                    User                     @relation(fields: [userId], references: [id])
+  deposits                SavingsDeposit[]
+  automations             SavingsAutomation[]
+  challengeParticipations ChallengeParticipation[]
+  reinvestment            InvestmentTransaction?   @relation("SavingsToInvestment")
+
+  groupId            String?             @db.Uuid
+  group              Group?              @relation(fields: [groupId], references: [id])
+  withdrawalRequests WithdrawalRequest[]
+
+  @@index([userId, status])
+  @@index([status, targetDate])
+  @@map("savings_goals")
+}
+
+model SavingsDeposit {
+  id              String   @id @default(uuid()) @db.Uuid
+  savingsGoalId   String   @db.Uuid
+  userId          String   @db.Uuid
+  amount          Decimal  @db.Decimal(12, 2)
+  currencyCode    String   @db.VarChar(3)
+  depositDate     DateTime @default(now())
+  source          String   @db.VarChar(50)
+  automationId    String?  @db.Uuid
+  referenceNumber String?  @db.VarChar(100)
+  notes           String?  @db.Text
+  createdAt       DateTime @default(now())
+
+  savingsGoal SavingsGoal        @relation(fields: [savingsGoalId], references: [id])
+  user        User               @relation(fields: [userId], references: [id])
+  automation  SavingsAutomation? @relation(fields: [automationId], references: [id])
+
+  @@index([savingsGoalId, depositDate])
+  @@index([userId, depositDate])
+  @@map("savings_deposits")
+}
+
+model SavingsAutomation {
+  id            String             @id @default(uuid()) @db.Uuid
+  userId        String             @db.Uuid
+  savingsGoalId String?            @db.Uuid
+  ruleType      AutomationRuleType
+  isActive      Boolean            @default(true)
+  configuration Json
+  lastExecuted  DateTime?
+  totalSaved    Decimal            @default(0) @db.Decimal(12, 2)
+  currencyCode  String             @db.VarChar(3)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  user        User             @relation(fields: [userId], references: [id])
+  savingsGoal SavingsGoal?     @relation(fields: [savingsGoalId], references: [id])
+  deposits    SavingsDeposit[]
+
+  @@index([userId, isActive])
+  @@index([ruleType, isActive])
+  @@map("savings_automations")
+}
+
+model SavingsChallenge {
+  id              String        @id @default(uuid()) @db.Uuid
+  name            String        @db.VarChar(100)
+  description     String        @db.Text
+  challengeType   ChallengeType
+  startDate       DateTime
+  endDate         DateTime
+  targetAmount    Decimal?      @db.Decimal(12, 2)
+  currencyCode    String        @db.VarChar(3)
+  isPublic        Boolean       @default(true)
+  createdBy       String        @db.Uuid
+  maxParticipants Int?
+  rules           Json
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  creator      User                     @relation(fields: [createdBy], references: [id])
+  participants ChallengeParticipation[]
+
+  @@index([challengeType, startDate])
+  @@index([isPublic, startDate])
+  @@map("savings_challenges")
+}
+
+model ChallengeParticipation {
+  id            String    @id @default(uuid()) @db.Uuid
+  challengeId   String    @db.Uuid
+  userId        String    @db.Uuid
+  savingsGoalId String?   @db.Uuid
+  joinedDate    DateTime  @default(now())
+  currentAmount Decimal   @default(0) @db.Decimal(12, 2)
+  isCompleted   Boolean   @default(false)
+  completedDate DateTime?
+  rank          Int?
+
+  challenge   SavingsChallenge @relation(fields: [challengeId], references: [id])
+  user        User             @relation(fields: [userId], references: [id])
+  savingsGoal SavingsGoal?     @relation(fields: [savingsGoalId], references: [id])
+
+  @@unique([challengeId, userId])
+  @@index([challengeId, rank])
+  @@index([userId, joinedDate])
+  @@map("challenge_participations")
+}
+
+model SavingsAnalytics {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @db.Uuid
+  periodStart    DateTime
+  periodEnd      DateTime
+  totalSaved     Decimal  @db.Decimal(12, 2)
+  totalWithdrawn Decimal  @default(0) @db.Decimal(12, 2)
+  savingsRate    Decimal  @db.Decimal(5, 2)
+  streakDays     Int      @default(0)
+  goalsCompleted Int      @default(0)
+  currencyCode   String   @db.VarChar(3)
+  createdAt      DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, periodStart])
+  @@map("savings_analytics")
+}
+
+enum SavingsGoalStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+enum WithdrawalRequestStatus {
+  PENDING
+  APPROVED
+  DENIED
+}
+
+model WithdrawalRequest {
+  id            String                  @id @default(uuid()) @db.Uuid
+  savingsGoalId String                  @db.Uuid
+  memberId      String                  @db.Uuid
+  groupId       String                  @db.Uuid
+  amount        Decimal                 @db.Decimal(12, 2)
+  status        WithdrawalRequestStatus @default(PENDING)
+  requestedAt   DateTime                @default(now())
+  processedAt   DateTime?
+  processedBy   String?                 @db.Uuid
+
+  savingsGoal SavingsGoal @relation(fields: [savingsGoalId], references: [id])
+  member      Member      @relation(fields: [memberId], references: [id])
+  group       Group       @relation(fields: [groupId], references: [id])
+  processor   User?       @relation("WithdrawalProcessor", fields: [processedBy], references: [id])
+
+  @@index([groupId, status])
+  @@map("withdrawal_requests")
+}
+
+enum SavingsGoalCategory {
+  EMERGENCY_FUND
+  EDUCATION
+  HOUSING
+  BUSINESS
+  TRAVEL
+  ELECTRONICS
+  MEDICAL
+  WEDDING
+  MICRO_SAVINGS
+  OTHER
+}
+
+enum AutomationRuleType {
+  ROUND_UP
+  PERCENTAGE_SAVE
+  RECURRING_TRANSFER
+  WINDFALL_SAVE
+}
+
+enum ChallengeType {
+  WEEK_52
+  DOLLAR_5
+  NO_SPEND
+  CUSTOM
+}
+
+// --- Micro-Investment Models ---
+
+model InvestmentAccount {
+  id            String                  @id @default(uuid()) @db.Uuid
+  userId        String                  @db.Uuid
+  status        InvestmentAccountStatus @default(PENDING)
+  totalValue    Decimal                 @default(0) @db.Decimal(12, 2)
+  cashBalance   Decimal                 @default(0) @db.Decimal(12, 2)
+  investedValue Decimal                 @default(0) @db.Decimal(12, 2)
+  currencyCode  String                  @default("KES") @db.VarChar(3)
+  riskTolerance RiskTolerance           @default(MODERATE)
+  kycStatus     String                  @default("NOT_STARTED")
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+
+  user            User                        @relation(fields: [userId], references: [id])
+  portfolios      Portfolio[]
+  orders          Order[]
+  transactions    InvestmentTransaction[]
+  recommendations RoboAdvisorRecommendation[]
+
+  groupId String? @db.Uuid
+  group   Group?  @relation(fields: [groupId], references: [id])
+
+  @@unique([userId, groupId])
+  @@map("investment_accounts")
+}
+
+model InvestmentProduct {
+  id             String      @id @default(uuid()) @db.Uuid
+  symbol         String      @unique @db.VarChar(20)
+  name           String      @db.VarChar(255)
+  description    String?     @db.Text
+  productType    ProductType
+  assetClass     String      @db.VarChar(50)
+  currentPrice   Decimal     @db.Decimal(12, 4)
+  prevClosePrice Decimal?    @db.Decimal(12, 4)
+  currencyCode   String      @default("KES") @db.VarChar(3)
+  isActive       Boolean     @default(true)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  holdings     Holding[]
+  orders       Order[]
+  transactions InvestmentTransaction[]
+
+  @@map("investment_products")
+}
+
+model Portfolio {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @db.Uuid
+  accountId    String   @db.Uuid
+  name         String   @db.VarChar(100)
+  description  String?  @db.Text
+  isDefault    Boolean  @default(false)
+  currencyCode String   @default("KES") @db.VarChar(3)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user     User              @relation(fields: [userId], references: [id])
+  account  InvestmentAccount @relation(fields: [accountId], references: [id])
+  holdings Holding[]
+
+  @@map("portfolios")
+}
+
+model Holding {
+  id             String   @id @default(uuid()) @db.Uuid
+  portfolioId    String   @db.Uuid
+  productId      String   @db.Uuid
+  quantity       Decimal  @db.Decimal(16, 8)
+  avgCostBasis   Decimal  @db.Decimal(16, 4)
+  currentValue   Decimal  @db.Decimal(16, 4)
+  unrealizedGain Decimal  @default(0) @db.Decimal(16, 4)
+  currencyCode   String   @default("KES") @db.VarChar(3)
+  lastUpdated    DateTime @updatedAt
+
+  portfolio Portfolio         @relation(fields: [portfolioId], references: [id])
+  product   InvestmentProduct @relation(fields: [productId], references: [id])
+
+  @@unique([portfolioId, productId])
+  @@map("holdings")
+}
+
+model Order {
+  id              String                    @id @default(uuid()) @db.Uuid
+  accountId       String                    @db.Uuid
+  productId       String                    @db.Uuid
+  orderType       OrderType                 @default(MARKET)
+  transactionType InvestmentTransactionType
+  quantity        Decimal                   @db.Decimal(16, 8)
+  limitPrice      Decimal?                  @db.Decimal(16, 4)
+  status          OrderStatus               @default(PENDING)
+  filledQuantity  Decimal                   @default(0) @db.Decimal(16, 8)
+  avgFillPrice    Decimal?                  @db.Decimal(16, 4)
+  filledAt        DateTime?
+  expiresAt       DateTime?
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+
+  account      InvestmentAccount       @relation(fields: [accountId], references: [id])
+  product      InvestmentProduct       @relation(fields: [productId], references: [id])
+  transactions InvestmentTransaction[]
+
+  @@map("investment_orders")
+}
+
+model InvestmentTransaction {
+  id              String                    @id @default(uuid()) @db.Uuid
+  accountId       String                    @db.Uuid
+  productId       String?                   @db.Uuid
+  orderId         String?                   @db.Uuid
+  transactionType InvestmentTransactionType
+  amount          Decimal                   @db.Decimal(12, 2)
+  quantity        Decimal?                  @db.Decimal(16, 8)
+  price           Decimal?                  @db.Decimal(16, 4)
+  fee             Decimal                   @default(0) @db.Decimal(12, 2)
+  currencyCode    String                    @db.VarChar(3)
+  description     String?                   @db.VarChar(255)
+  transactionDate DateTime                  @default(now())
+
+  account       InvestmentAccount  @relation(fields: [accountId], references: [id])
+  product       InvestmentProduct? @relation(fields: [productId], references: [id])
+  order         Order?             @relation(fields: [orderId], references: [id])
+  savingsGoalId String?            @unique @db.Uuid
+  savingsGoal   SavingsGoal?       @relation("SavingsToInvestment", fields: [savingsGoalId], references: [id])
+
+  @@index([accountId, transactionDate])
+  @@map("investment_transactions")
+}
+
+model RoboAdvisorRecommendation {
+  id                  String        @id @default(uuid()) @db.Uuid
+  userId              String        @db.Uuid
+  accountId           String        @db.Uuid
+  riskTolerance       RiskTolerance
+  targetAllocation    Json
+  recommendedProducts Json
+  reasoning           String?       @db.Text
+  status              String        @default("PROPOSED")
+  createdAt           DateTime      @default(now())
+  appliedAt           DateTime?
+
+  user    User              @relation(fields: [userId], references: [id])
+  account InvestmentAccount @relation(fields: [accountId], references: [id])
+
+  @@map("robo_advisor_recommendations")
+}
+
+enum InvestmentAccountStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  CLOSED
+}
+
+enum RiskTolerance {
+  CONSERVATIVE
+  MODERATE
+  AGGRESSIVE
+}
+
+enum ProductType {
+  STOCK
+  BOND
+  ETF
+  CRYPTO
+  MONEY_MARKET
+}
+
+enum OrderType {
+  MARKET
+  LIMIT
+}
+
+enum OrderStatus {
+  PENDING
+  FILLED
+  CANCELLED
+  EXPIRED
+  REJECTED
+}
+
+enum InvestmentTransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  BUY
+  SELL
+  DIVIDEND
+  INTEREST
+  FEE
+}

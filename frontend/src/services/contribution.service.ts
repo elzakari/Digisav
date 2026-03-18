@@ -1,0 +1,38 @@
+import api from './api';
+
+export const contributionService = {
+  async recordContribution(groupId: string, data: any) {
+    const response = await api.post(`/groups/${groupId}/contributions`, data);
+    return response.data.data;
+  },
+
+  async getGroupStats(groupId: string) {
+    const response = await api.get(`/groups/${groupId}/stats`);
+    return response.data.data;
+  },
+
+  async getContributionHistory(groupId: string, memberId?: string) {
+    const url = memberId
+      ? `/groups/${groupId}/contributions?memberId=${memberId}`
+      : `/groups/${groupId}/contributions`;
+    const response = await api.get(url);
+    return response.data.data;
+  },
+
+  async downloadReport(groupId: string, startDate: string, endDate: string, type: string = 'contributions', format: string = 'pdf') {
+    const response = await api.post(
+      `/groups/${groupId}/reports`,
+      { startDate, endDate, type, format },
+      { responseType: 'blob' }
+    );
+    return response.data;
+  },
+
+  async getShareLink(groupId: string, params: { startDate: string; endDate: string; type: string; format: string }) {
+    const response = await api.post<{ success: boolean; shareLink: string }>(
+      `/groups/${groupId}/reports/share`,
+      params
+    );
+    return response.data.shareLink;
+  },
+};

@@ -1,0 +1,4 @@
+[35m◐[39m Starting cloudflared tunnel to http://localhost:3000
+[36mℹ[39m Waiting for tunnel URL...
+[32m✔[39m Tunnel ready at [36mhttps://laptop-blades-floral-bras.trycloudflare.com[39m
+^C

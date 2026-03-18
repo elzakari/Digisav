@@ -1,0 +1,18 @@
+﻿
+> backend@1.0.0 dev
+> ts-node-dev -r tsconfig-paths/register --respawn --transpile-only src/server.ts
+
+[INFO] 14:17:18 ts-node-dev ver. 2.0.0 (using ts-node ver. 10.9.2, typescript ver. 5.9.3)
+[dotenv@17.3.1] injecting env (0) from .env -- tip: ÔÜÖ´©Å  load multiple .env files with { path: ['.env.local', '.env'] }
+2026-03-11 14:17:26:1726 [32minfo[39m: [32mServer running on port 3000[39m
+2026-03-11 14:17:26:1726 [32minfo[39m: [32mEnvironment: development[39m
+2026-03-11 14:20:23:2023 [31merror[39m: [31m{[39m
+[31m  error: 'Invalid credentials',[39m
+[31m  stack: 'UnauthorizedError: Invalid credentials\n' +[39m
+[31m    '    at AuthService.login (C:\\Users\\Public\\Documents\\DigiSav\\backend\\src\\services\\auth\\auth.service.ts:66:13)\n' +[39m
+[31m    '    at login (C:\\Users\\Public\\Documents\\DigiSav\\backend\\src\\api\\controllers\\auth.controller.ts:18:20)',[39m
+[31m  path: '/api/v1/auth/login',[39m
+[31m  method: 'POST'[39m
+[31m}[39m
+2026-03-11 14:20:23:2023 [32minfo[39m: [32m::1 - - [11/Mar/2026:14:20:23 +0000] "POST /api/v1/auth/login HTTP/1.1" 401 81 "-" "Mozilla/5.0 (Windows NT; Windows NT 10.0; en-US) WindowsPowerShell/5.1.26100.7705"[39m
+2026-03-11 14:30:30:3030 [32minfo[39m: [32m::1 - - [11/Mar/2026:14:30:30 +0000] "POST /api/v1/auth/register HTTP/1.1" 201 225 "-" "Mozilla/5.0 (Windows NT; Windows NT 10.0; en-US) WindowsPowerShell/5.1.26100.7705"[39m

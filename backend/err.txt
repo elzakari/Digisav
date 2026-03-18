@@ -1,0 +1,113 @@
+﻿node.exe : C:\Users\Pub
+lic\Documents\DigiSav\b
+ackend\node_modules\ts-
+node\src\index.ts:859
+At C:\Program Files\nod
+ejs\npx.ps1:29 char:3
++   & $NODE_EXE 
+$NPX_CLI_JS $args
++   ~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~
+    + CategoryInfo     
+         : NotSpecifi  
+  ed: (C:\Users\Publ   
+ ic...rc\index.ts:8    
+59:String) [], Rem    
+oteException
+    + FullyQualifiedEr 
+   rorId : NativeComm  
+  andError
+ 
+    return new TSError(
+diagnosticText, 
+diagnosticCodes, 
+diagnostics);
+           ^
+TSError: Ô¿» Unable to 
+compile TypeScript:
+src/server.ts(4,20): 
+error TS7016: Could 
+not find a declaration 
+file for module 
+'morgan'. 'C:/Users/Pub
+lic/Documents/DigiSav/b
+ackend/node_modules/mor
+gan/index.js' 
+implicitly has an 
+'any' type.
+  Try `npm i 
+--save-dev 
+@types/morgan` if it 
+exists or add a new 
+declaration (.d.ts) 
+file containing 
+`declare module 
+'morgan';`
+src/server.ts(32,23): 
+error TS7016: Could 
+not find a declaration 
+file for module 
+'swagger-ui-express'. '
+C:/Users/Public/Documen
+ts/DigiSav/backend/node
+_modules/swagger-ui-exp
+ress/index.js' 
+implicitly has an 
+'any' type.
+  Try `npm i 
+--save-dev @types/swagg
+er-ui-express` if it 
+exists or add a new 
+declaration (.d.ts) 
+file containing 
+`declare module 
+'swagger-ui-express';`
+
+    at createTSError (C
+:\Users\Public\Document
+s\DigiSav\backend\node_
+modules\ts-node\src\ind
+ex.ts:859:12)
+    at reportTSError (C
+:\Users\Public\Document
+s\DigiSav\backend\node_
+modules\ts-node\src\ind
+ex.ts:863:19)
+    at getOutput (C:\Us
+ers\Public\Documents\Di
+giSav\backend\node_modu
+les\ts-node\src\index.t
+s:1077:36)
+    at Object.compile (
+C:\Users\Public\Documen
+ts\DigiSav\backend\node
+_modules\ts-node\src\in
+dex.ts:1433:41)
+    at 
+Module.m._compile (C:\U
+sers\Public\Documents\D
+igiSav\backend\node_mod
+ules\ts-node\src\index.
+ts:1617:30)
+    at node:internal/mo
+dules/cjs/loader:1689:1
+0
+    at Object.require.e
+xtensions.<computed> 
+[as .ts] (C:\Users\Publ
+ic\Documents\DigiSav\ba
+ckend\node_modules\ts-n
+ode\src\index.ts:1621:1
+2)
+    at Module.load (nod
+e:internal/modules/cjs/
+loader:1318:32)
+    at Function._load (
+node:internal/modules/c
+js/loader:1128:12)
+    at TracingChannel.t
+raceSync (node:diagnost
+ics_channel:315:14) {
+  diagnosticCodes: [ 
+7016, 7016 ]
+}

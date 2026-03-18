@@ -1,0 +1,4 @@
+﻿src/components/common/ProtectedRoute.tsx(1,1): error TS6133: 'React' is declared but its value is never read.
+src/pages/member/JoinGroup.tsx(2,10): error TS6133: 'useParams' is declared but its value is never read.
+src/pages/member/JoinGroup.tsx(27,21): error TS6133: 'data' is declared but its value is never read.
+src/pages/savings/CreateGoal.tsx(7,1): error TS6133: 'useTranslation' is declared but its value is never read.

@@ -1,0 +1,26 @@
+﻿Logging in as Daro...
+Login successful. Fetching dashboard groups...
+Found 1 groups on Member Dashboard:
+[
+  {
+    "id": "5d124e5e-ef12-433d-954e-9e7066338911",
+    "groupName": "Zed group",
+    "groupPrefix": "CLKHV",
+    "adminUserId": "7edd92d0-62fe-47ad-a34c-f139f3e6c059",
+    "contributionAmount": "500",
+    "currencyCode": "XOF",
+    "paymentFrequency": "DAILY",
+    "customFrequencyDays": null,
+    "maxMembers": 10,
+    "payoutOrderType": "MANUAL",
+    "startDate": "2026-02-27T00:00:00.000Z",
+    "status": "DRAFT",
+    "gracePeriodDays": 3,
+    "createdAt": "2026-02-27T23:37:24.296Z",
+    "updatedAt": "2026-02-27T23:37:24.296Z",
+    "_count": {
+      "members": 2,
+      "contributions": 2
+    }
+  }
+]

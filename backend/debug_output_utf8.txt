@@ -1,0 +1,67 @@
+﻿Users found: [
+  {
+    "id": "96c9fbac-c047-4d43-a43b-4f364f4941e5",
+    "email": "elzakari1@gmail.com",
+    "phoneNumber": "+233555092842",
+    "passwordHash": "$2b$12$phl5vk1VN3LRCFAXWqHEM.x2WoThz7UGVac3tn/y53fZ2Pz23pkI6",
+    "fullName": "Daro",
+    "status": "ACTIVE",
+    "role": "MEMBER",
+    "emailVerified": false,
+    "phoneVerified": false,
+    "lastLogin": "2026-02-28T16:41:59.021Z",
+    "createdAt": "2026-02-25T02:56:10.054Z",
+    "updatedAt": "2026-02-28T16:41:59.022Z"
+  },
+  {
+    "id": "7a4ff68c-028c-4845-a856-92dbd150846a",
+    "email": "daro@gmail.com",
+    "phoneNumber": "+254 700 000000",
+    "passwordHash": "$2b$12$OTAwTR/4CsrQe/V9qUdnuu/fRTRirDroS0T4WbmobR2yO50NNPk/W",
+    "fullName": "Daro",
+    "status": "ACTIVE",
+    "role": "MEMBER",
+    "emailVerified": false,
+    "phoneVerified": false,
+    "lastLogin": null,
+    "createdAt": "2026-02-28T16:49:11.824Z",
+    "updatedAt": "2026-02-28T16:49:11.824Z"
+  }
+]
+Memberships for Daro (96c9fbac-c047-4d43-a43b-4f364f4941e5): [
+  {
+    "id": "16554b7f-d1d5-41c5-bcc3-4b165bdcc16a",
+    "userId": "96c9fbac-c047-4d43-a43b-4f364f4941e5",
+    "groupId": "5d124e5e-ef12-433d-954e-9e7066338911",
+    "accountNumber": "undefined-84329-8",
+    "nationalId": "JOIN-a96b3c1c",
+    "photoUrl": null,
+    "dateOfBirth": null,
+    "joinDate": "2026-02-28T16:30:37.241Z",
+    "status": "PENDING",
+    "payoutPosition": null,
+    "optInMessaging": true,
+    "createdAt": "2026-02-28T16:30:37.242Z",
+    "updatedAt": "2026-02-28T16:30:37.242Z",
+    "group": {
+      "id": "5d124e5e-ef12-433d-954e-9e7066338911",
+      "groupName": "Zed group",
+      "groupPrefix": "CLKHV",
+      "adminUserId": "7edd92d0-62fe-47ad-a34c-f139f3e6c059",
+      "contributionAmount": "500",
+      "currencyCode": "XOF",
+      "paymentFrequency": "DAILY",
+      "customFrequencyDays": null,
+      "maxMembers": 10,
+      "payoutOrderType": "MANUAL",
+      "startDate": "2026-02-27T00:00:00.000Z",
+      "status": "DRAFT",
+      "gracePeriodDays": 3,
+      "createdAt": "2026-02-27T23:37:24.296Z",
+      "updatedAt": "2026-02-27T23:37:24.296Z"
+    }
+  }
+]
+Admin groups for Daro: []
+Memberships for Daro (7a4ff68c-028c-4845-a856-92dbd150846a): []
+Admin groups for Daro: []

@@ -1,0 +1,144 @@
+import { Request, Response, NextFunction } from 'express';
+import { MemberService } from '@/services/members/member.service';
+import { AuthRequest } from '@/api/middleware/auth.middleware';
+
+export class MemberController {
+  private memberService: MemberService;
+
+  constructor() {
+    this.memberService = new MemberService();
+  }
+
+  async registerMember(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user!.id;
+      const { groupId } = req.params as any;
+      const member = await this.memberService.registerMember({
+        userId,
+        groupId,
+        ...req.body,
+      });
+
+      res.status(201).json({
+        success: true,
+        data: member,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async approveMember(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const adminUserId = req.user!.id;
+      const userRole = req.user!.role;
+      const { memberId } = req.params as any;
+      const member = await this.memberService.approveMember(memberId, adminUserId, userRole);
+
+      res.status(200).json({
+        success: true,
+        data: member,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async rejectMember(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const adminUserId = req.user!.id;
+      const userRole = req.user!.role;
+      const { memberId } = req.params as any;
+      const member = await this.memberService.rejectMember(memberId, adminUserId, userRole);
+
+      res.status(200).json({
+        success: true,
+        data: member,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async suspendMember(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const adminUserId = req.user!.id;
+      const userRole = req.user!.role;
+      const { memberId } = req.params as any;
+      const member = await this.memberService.suspendMember(memberId, adminUserId, userRole);
+
+      res.status(200).json({
+        success: true,
+        data: member,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async removeMember(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const adminUserId = req.user!.id;
+      const userRole = req.user!.role;
+      const { memberId } = req.params as any;
+      const member = await this.memberService.removeMember(memberId, adminUserId, userRole);
+
+      res.status(200).json({
+        success: true,
+        data: member,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getGroupMembers(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user!.id;
+      const { groupId } = req.params as any;
+      const { status } = req.query as any;
+      const members = await this.memberService.getGroupMembers(groupId, userId, status as string);
+
+      res.status(200).json({
+        success: true,
+        data: members,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async updateMember(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const adminUserId = req.user!.id;
+      const userRole = req.user!.role;
+      const { memberId } = req.params as any;
+      const member = await this.memberService.updateMember(memberId, adminUserId, userRole, req.body);
+
+      res.status(200).json({
+        success: true,
+        data: member,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async bulkUpdate(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const adminUserId = req.user!.id;
+      const userRole = req.user!.role;
+      const { groupId } = req.params as any;
+      const { memberIds, data } = req.body;
+      
+      const result = await this.memberService.bulkUpdateMembers(groupId, memberIds, data, adminUserId, userRole);
+
+      res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+}
