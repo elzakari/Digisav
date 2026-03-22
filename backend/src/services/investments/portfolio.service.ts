@@ -35,7 +35,7 @@ export class PortfolioService {
    */
   async getPortfolioSummary(userId: string) {
     const holdings = await this.getUserHoldings(userId);
-    const account = await prisma.investmentAccount.findUnique({
+    const account = await prisma.investmentAccount.findFirst({
       where: { userId },
     });
 
@@ -93,7 +93,7 @@ export class PortfolioService {
    */
   async getAllocationBreakdown(userId: string) {
     const holdings = await this.getUserHoldings(userId);
-    const account = await prisma.investmentAccount.findUnique({
+    const account = await prisma.investmentAccount.findFirst({
       where: { userId },
     });
 

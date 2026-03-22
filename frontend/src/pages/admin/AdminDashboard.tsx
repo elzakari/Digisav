@@ -52,7 +52,7 @@ export function AdminDashboard() {
         </div>
       </div>
 
-      <AdminGlobalStats />
+      <AdminGlobalStats groups={groups || []} />
 
       <div className="space-y-6">
         <h2 className="text-2xl font-semibold text-slate-200">{t('dashboard.my_groups')}</h2>
@@ -153,7 +153,7 @@ export function AdminDashboard() {
   );
 }
 
-function AdminGlobalStats() {
+function AdminGlobalStats({ groups }: { groups: any[] }) {
   const { t } = useTranslation();
   const { data: stats, isLoading } = useQuery({
     queryKey: ['admin-stats'],
@@ -170,12 +170,59 @@ function AdminGlobalStats() {
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
       <StatCard title={t('dashboard.active_groups')} value={stats?.totalGroups || 0} type="info" />
       <StatCard title={t('dashboard.members_managed')} value={stats?.totalMembers || 0} type="warning" />
-      <StatCard title={t('dashboard.total_funds')} value={formatCurrency(stats?.totalFundsCollected || 0, 0, 'KES')} type="success" />
+      <StatCard
+        title={t('dashboard.total_funds')}
+        value={getFundsDisplayValue(stats, groups)}
+        hint={getFundsHint(stats, groups, t)}
+        type="success"
+      />
     </div>
   );
 }
 
-function StatCard({ title, value, type = 'info' }: any) {
+function getFundsHint(stats: any, groups: any[], t: any) {
+  const totalsByCurrency = stats?.totalsByCurrency as Array<{ currencyCode: string; total: number }> | undefined;
+  if (totalsByCurrency && totalsByCurrency.length > 1) {
+    return t('dashboard.multi_currency', 'Multiple currencies');
+  }
+
+  const currencies = Array.from(
+    new Set((groups || []).map((g) => g.currencyCode).filter(Boolean))
+  );
+  if (currencies.length > 1) {
+    return t('dashboard.multi_currency', 'Multiple currencies');
+  }
+
+  return undefined;
+}
+
+function getFundsDisplayValue(stats: any, groups: any[]) {
+  const totalsByCurrency = stats?.totalsByCurrency as Array<{ currencyCode: string; total: number }> | undefined;
+  if (totalsByCurrency && totalsByCurrency.length) {
+    if (totalsByCurrency.length === 1) {
+      return formatCurrency(totalsByCurrency[0].total || 0, 0, totalsByCurrency[0].currencyCode);
+    }
+
+    const primary = totalsByCurrency[0];
+    const more = totalsByCurrency.length - 1;
+    return `${formatCurrency(primary.total || 0, 0, primary.currencyCode)} +${more}`;
+  }
+
+  const currencies = Array.from(
+    new Set((groups || []).map((g) => g.currencyCode).filter(Boolean))
+  );
+  if (currencies.length === 1) {
+    return formatCurrency(stats?.totalFundsCollected || 0, 0, currencies[0]);
+  }
+
+  if (stats?.totalFundsCollected) {
+    return String(stats.totalFundsCollected);
+  }
+
+  return formatCurrency(0, 0, currencies[0] || 'KES');
+}
+
+function StatCard({ title, value, hint, type = 'info' }: any) {
   const styles: any = {
     info: 'from-indigo-500/20 to-transparent text-indigo-400 border-indigo-500/20',
     success: 'from-emerald-500/20 to-transparent text-emerald-400 border-emerald-500/20',
@@ -190,6 +237,11 @@ function StatCard({ title, value, type = 'info' }: any) {
           {value}
         </p>
       </div>
+      {hint ? (
+        <div className="mt-2 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+          {hint}
+        </div>
+      ) : null}
     </div>
   );
 }

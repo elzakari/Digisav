@@ -1,23 +1,37 @@
 import { Request, Response, NextFunction } from 'express';
 import { MemberService } from '@/services/members/member.service';
 import { AuthRequest } from '@/api/middleware/auth.middleware';
+import { InvitationService } from '@/services/invitations/invitation.service';
+import { ValidationError } from '@/utils/errors';
 
 export class MemberController {
   private memberService: MemberService;
+  private invitationService: InvitationService;
 
   constructor() {
     this.memberService = new MemberService();
+    this.invitationService = new InvitationService();
   }
 
   async registerMember(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const userId = req.user!.id;
       const { groupId } = req.params as any;
+
+      const { invitationToken, ...rest } = req.body;
+      if (!invitationToken || typeof invitationToken !== 'string') {
+        throw new ValidationError('Invitation token is required');
+      }
+
+      await this.invitationService.validateInvitation(groupId, invitationToken);
+
       const member = await this.memberService.registerMember({
         userId,
         groupId,
-        ...req.body,
+        ...rest,
       });
+
+      await this.invitationService.consumeInvitation(invitationToken);
 
       res.status(201).json({
         success: true,

@@ -7,7 +7,7 @@ export class TradingService {
    * Place a market order
    */
   async placeOrder(userId: string, productId: string, quantity: number, type: 'BUY' | 'SELL') {
-    const account = await prisma.investmentAccount.findUnique({
+    const account = await prisma.investmentAccount.findFirst({
       where: { userId },
     });
 

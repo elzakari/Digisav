@@ -14,6 +14,7 @@ export function EditGroupModal({ group, isOpen, onClose }: EditGroupModalProps) 
     const { t } = useTranslation();
     const [form, setForm] = useState({
         groupName: '',
+        currencyCode: 'KES',
         maxMembers: 0,
         gracePeriodDays: 0,
         groupFeePercentage: 0,
@@ -25,6 +26,7 @@ export function EditGroupModal({ group, isOpen, onClose }: EditGroupModalProps) 
         if (group && isOpen) {
             setForm({
                 groupName: group.groupName || '',
+                currencyCode: group.currencyCode || 'KES',
                 maxMembers: group.maxMembers || 0,
                 gracePeriodDays: group.gracePeriodDays || 0,
                 groupFeePercentage: group.groupFeePercentage || 0,
@@ -42,6 +44,7 @@ export function EditGroupModal({ group, isOpen, onClose }: EditGroupModalProps) 
             // The existing updateGroup endpoint handles logic for locked fields.
             promises.push(groupService.updateGroup(group.id, {
                 groupName: data.groupName,
+                currencyCode: data.currencyCode,
                 maxMembers: data.maxMembers,
                 gracePeriodDays: data.gracePeriodDays
             }));
@@ -59,6 +62,8 @@ export function EditGroupModal({ group, isOpen, onClose }: EditGroupModalProps) 
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['group', group.id] });
             queryClient.invalidateQueries({ queryKey: ['groups'] });
+            queryClient.invalidateQueries({ queryKey: ['group-stats', group.id] });
+            queryClient.invalidateQueries({ queryKey: ['group-dashboard', group.id] });
             onClose();
         },
         onError: (err: any) => {
@@ -69,6 +74,14 @@ export function EditGroupModal({ group, isOpen, onClose }: EditGroupModalProps) 
     if (!isOpen) return null;
 
     const isActive = group?.status === 'ACTIVE';
+
+    const handleSave = () => {
+        if (form.currencyCode !== (group?.currencyCode || 'KES')) {
+            const ok = window.confirm(`Change group currency from ${group?.currencyCode || 'KES'} to ${form.currencyCode}? This will update dashboard formatting.`);
+            if (!ok) return;
+        }
+        mutation.mutate(form);
+    };
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
@@ -113,6 +126,25 @@ export function EditGroupModal({ group, isOpen, onClose }: EditGroupModalProps) 
                             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-indigo-500/50 transition-all placeholder:text-slate-700"
                             placeholder={t('admin.group_name_placeholder')}
                         />
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">Currency</label>
+                        <select
+                            value={form.currencyCode}
+                            onChange={e => setForm({ ...form, currencyCode: e.target.value })}
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-indigo-500/50 transition-all"
+                        >
+                            <option value="KES">Kenyan Shilling (KES)</option>
+                            <option value="USD">US Dollar (USD)</option>
+                            <option value="EUR">Euro (EUR)</option>
+                            <option value="TZS">Tanzanian Shilling (TZS)</option>
+                            <option value="UGX">Ugandan Shilling (UGX)</option>
+                            <option value="NGN">Nigerian Naira (NGN)</option>
+                            <option value="XOF">CFA Franc (XOF)</option>
+                            <option value="GHS">Ghanaian Cedi (GHS)</option>
+                        </select>
+                        <p className="text-[9px] text-slate-600 ml-1">This updates formatting across dashboard totals and reports.</p>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -181,7 +213,7 @@ export function EditGroupModal({ group, isOpen, onClose }: EditGroupModalProps) 
                         {t('common.cancel')}
                     </button>
                     <button
-                        onClick={() => mutation.mutate(form)}
+                        onClick={handleSave}
                         disabled={mutation.isPending}
                         className="flex-[2] relative overflow-hidden group/btn px-6 py-3 bg-gradient-to-r from-indigo-600 to-indigo-500 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] text-white shadow-xl shadow-indigo-500/20 hover:shadow-indigo-500/40 transition-all active:scale-[0.98] disabled:opacity-50"
                     >

@@ -11,16 +11,21 @@ export const formatCurrency = (amount: number, fixedDecimals: number = 0, curren
   const user = authService.getCurrentUser();
   const currencyCode = currencyOverride || user?.defaultCurrency || 'KES';
 
-  const formatter = new Intl.NumberFormat(undefined, {
-    style: 'decimal',
-    minimumFractionDigits: fixedDecimals,
-    maximumFractionDigits: fixedDecimals,
-  });
-
-  const formattedAmount = formatter.format(amount);
-
-  // Return with currency code prefix
-  return `${currencyCode} ${formattedAmount}`;
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency: currencyCode,
+      currencyDisplay: 'code',
+      minimumFractionDigits: fixedDecimals,
+      maximumFractionDigits: fixedDecimals,
+    }).format(amount);
+  } catch {
+    const formattedAmount = new Intl.NumberFormat(undefined, {
+      minimumFractionDigits: fixedDecimals,
+      maximumFractionDigits: fixedDecimals,
+    }).format(amount);
+    return `${currencyCode} ${formattedAmount}`;
+  }
 };
 
 /**

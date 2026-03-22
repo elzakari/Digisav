@@ -32,7 +32,7 @@ export class InvestmentService {
    * Update account status (e.g., after KYC)
    */
   async updateAccountStatus(userId: string, status: InvestmentAccountStatus) {
-    return prisma.investmentAccount.update({
+    return prisma.investmentAccount.updateMany({
       where: { userId },
       data: { status },
     });
@@ -42,7 +42,7 @@ export class InvestmentService {
    * Update risk tolerance
    */
   async updateRiskProfile(userId: string, riskTolerance: RiskTolerance) {
-    return prisma.investmentAccount.update({
+    return prisma.investmentAccount.updateMany({
       where: { userId },
       data: { riskTolerance },
     });
@@ -86,7 +86,7 @@ export class InvestmentService {
    * Withdraw cash from investment account
    */
   async withdrawCash(userId: string, amount: number) {
-    const account = await prisma.investmentAccount.findUnique({
+    const account = await prisma.investmentAccount.findFirst({
       where: { userId },
     });
 
@@ -125,7 +125,7 @@ export class InvestmentService {
    * Get transaction history
    */
   async getTransactionHistory(userId: string, limit = 20) {
-    const account = await prisma.investmentAccount.findUnique({
+    const account = await prisma.investmentAccount.findFirst({
       where: { userId },
     });
 

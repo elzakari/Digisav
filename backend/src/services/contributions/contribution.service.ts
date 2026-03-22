@@ -80,7 +80,8 @@ export class ContributionService {
         });
 
         // 3. Create transaction in ledger
-        await this.ledgerService.createTransaction({
+        const ledgerService = new LedgerService(tx as any);
+        await ledgerService.createTransaction({
           groupId: data.groupId,
           memberId: data.memberId,
           transactionType: TransactionType.CONTRIBUTION, // Reusing CONTRIBUTION for now
@@ -185,7 +186,8 @@ export class ContributionService {
       });
 
       // 6. Create transaction in ledger
-      await this.ledgerService.createTransaction({
+      const ledgerService = new LedgerService(tx as any);
+      await ledgerService.createTransaction({
         groupId: data.groupId,
         memberId: data.memberId,
         transactionType: TransactionType.CONTRIBUTION,
@@ -236,19 +238,19 @@ export class ContributionService {
   }
 
   async getGroupStats(groupId: string) {
-    const group = await prisma.group.findUnique({
+    const group = await this.prisma.group.findUnique({
       where: { id: groupId },
       include: { _count: { select: { members: true } } },
     });
 
     if (!group) throw new NotFoundError('Group');
 
-    const totalCollected = await prisma.contribution.aggregate({
+    const totalCollected = await this.prisma.contribution.aggregate({
       where: { groupId, status: 'COMPLETED' },
       _sum: { amount: true },
     });
 
-    const activeMembersCount = await prisma.member.count({
+    const activeMembersCount = await this.prisma.member.count({
       where: { groupId, status: 'ACTIVE' },
     });
 
@@ -276,7 +278,7 @@ export class ContributionService {
       whereClause.memberId = memberId;
     }
 
-    return prisma.contribution.findMany({
+    return this.prisma.contribution.findMany({
       where: whereClause,
       include: {
         member: {

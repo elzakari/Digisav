@@ -6,6 +6,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useNavigate, Link } from 'react-router-dom';
 import { savingsService } from '@/services/savings.service';
 import { groupService } from '@/services/group.service';
+import { authService } from '@/services/auth.service';
 
 const createGoalSchema = z.object({
   name: z.string().min(3, 'Name must be at least 3 characters'),
@@ -31,6 +32,7 @@ type CreateGoalForm = z.infer<typeof createGoalSchema>;
 
 export function CreateGoalPage() {
   const navigate = useNavigate();
+  const user = authService.getCurrentUser();
 
   const { data: groups, isLoading: isGroupsLoading } = useQuery({
     queryKey: ['my-groups'],
@@ -48,6 +50,7 @@ export function CreateGoalPage() {
     register,
     handleSubmit,
     setValue,
+    watch,
     formState: { errors },
   } = useForm<CreateGoalForm>({
     resolver: zodResolver(createGoalSchema) as any,
@@ -76,8 +79,14 @@ export function CreateGoalPage() {
   }
 
   const onSubmit: SubmitHandler<CreateGoalForm> = (data) => {
-    createGoalMutation.mutate(data);
+    const selectedGroup = groups?.find((g: any) => g.id === data.groupId);
+    const currencyCode = selectedGroup?.currencyCode || user?.defaultCurrency || 'KES';
+    createGoalMutation.mutate({ ...data, currencyCode });
   };
+
+  const selectedGroupId = watch('groupId');
+  const selectedGroup = groups?.find((g: any) => g.id === selectedGroupId);
+  const currencyCode = selectedGroup?.currencyCode || user?.defaultCurrency || 'KES';
 
   return (
     <div className="w-full max-w-2xl mx-auto animate-fade-in-up py-10">
@@ -116,7 +125,7 @@ export function CreateGoalPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-1.5">
                 <label className="block text-sm font-bold uppercase tracking-widest text-slate-400 ml-1">
-                  Target Amount (KES)
+                  Target Amount ({currencyCode})
                 </label>
                 <input
                   {...register('targetAmount', { valueAsNumber: true })}

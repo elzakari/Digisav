@@ -80,4 +80,17 @@ export class ContributionController {
       next(error);
     }
   }
+
+  async verifyLedger(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const { groupId } = req.params as any;
+      const ok = await this.contributionService.verifyLedgerIntegrity(groupId);
+      res.status(200).json({
+        success: true,
+        data: { ok },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

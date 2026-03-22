@@ -1,4 +1,4 @@
-import { TransactionType } from '@prisma/client';
+import { PrismaClient, TransactionType } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { generateHash } from '@/utils/crypto';
 
@@ -14,6 +14,12 @@ interface CreateTransactionData {
 }
 
 export class LedgerService {
+  private prisma: PrismaClient;
+
+  constructor(prismaClient?: PrismaClient) {
+    this.prisma = prismaClient || prisma;
+  }
+
   async createTransaction(data: CreateTransactionData) {
     // 1. Get previous transaction hash
     const previousTransaction = await this.getLastTransaction(data.groupId);
@@ -30,7 +36,7 @@ export class LedgerService {
     const hash = generateHash(payload);
 
     // 4. Create transaction
-    return prisma.transaction.create({
+    return this.prisma.transaction.create({
       data: {
         ...data,
         hash,
@@ -41,14 +47,14 @@ export class LedgerService {
   }
 
   private async getLastTransaction(groupId: string) {
-    return prisma.transaction.findFirst({
+    return this.prisma.transaction.findFirst({
       where: { groupId },
       orderBy: { timestamp: 'desc' },
     });
   }
 
   async verifyChain(groupId: string): Promise<boolean> {
-    const transactions = await prisma.transaction.findMany({
+    const transactions = await this.prisma.transaction.findMany({
       where: { groupId },
       orderBy: { timestamp: 'asc' },
     });
@@ -80,13 +86,6 @@ export class LedgerService {
 
       const calculatedHash = generateHash(payload);
       if (calculatedHash !== current.hash) {
-        // Log mismatch for debugging
-        console.error(`Hash mismatch for transaction ${current.id}:`, {
-          stored: current.hash,
-          calculated: calculatedHash,
-        });
-        // Note: In a production system, we'd also need to handle decimal precision
-        // and potential field omissions. For the MVP, we assume consistency.
         return false;
       }
     }

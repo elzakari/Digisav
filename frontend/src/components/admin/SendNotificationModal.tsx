@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { groupService } from '@/services/group.service';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'react-hot-toast';
 
 interface SendNotificationModalProps {
     groupId: string;
@@ -16,13 +17,21 @@ export function SendNotificationModal({ groupId, isOpen, onClose }: SendNotifica
 
     const mutation = useMutation({
         mutationFn: (data: any) => groupService.sendGroupNotification(groupId, data),
-        onSuccess: () => {
+        onSuccess: (result: any) => {
             setForm({ title: '', body: '' });
-            alert('Notification sent successfully!');
+            const count = result?.count ?? result?.data?.count;
+            if (typeof count === 'number' && count === 0) {
+                toast.error(t('admin.no_recipients', 'No members to notify'));
+            } else if (typeof count === 'number') {
+                toast.success(String(t('admin.notification_sent_count', { count, defaultValue: `Notification sent to ${count} members` } as any)));
+            } else {
+                toast.success(t('admin.notification_sent', 'Notification sent successfully'));
+            }
             onClose();
         },
         onError: (err: any) => {
-            setError(err?.response?.data?.message || 'Failed to send notification');
+            const msg = err?.response?.data?.error?.message || err?.response?.data?.message;
+            setError(msg || t('admin.notification_failed', 'Failed to send notification'));
         },
     });
 
@@ -97,7 +106,7 @@ export function SendNotificationModal({ groupId, isOpen, onClose }: SendNotifica
                           if (form.title.trim() && form.body.trim()) {
                             mutation.mutate(form)
                           } else {
-                            setError('Title and Body are required');
+                            setError(t('admin.title_body_required', 'Title and message are required'));
                           }
                         }}
                         disabled={mutation.isPending}

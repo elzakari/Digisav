@@ -1,15 +1,14 @@
 import api from './api';
+import { useAuthStore, type AuthUser } from '@/store/auth.store';
 
 export const authService = {
   async login(data: any) {
     const response = await api.post('/auth/login', data);
-    const payload = response.data.data; // backend wraps: { success, data: { user, accessToken, refreshToken } }
-    if (payload?.accessToken) {
-      localStorage.setItem('accessToken', payload.accessToken);
-      localStorage.setItem('refreshToken', payload.refreshToken);
-      localStorage.setItem('user', JSON.stringify(payload.user));
+    const payload = response.data.data;
+    if (payload?.accessToken && payload?.user) {
+      useAuthStore.getState().setAuth(payload.accessToken, payload.user as AuthUser);
     }
-    return payload; // return the inner payload so Login.tsx can read payload.user.role
+    return payload;
   },
 
   async register(data: any) {
@@ -17,19 +16,33 @@ export const authService = {
     return response.data;
   },
 
-  logout() {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('user');
+  async logout() {
+    await api.post('/auth/logout');
+    useAuthStore.getState().clear();
   },
 
   getCurrentUser() {
-    const userStr = localStorage.getItem('user');
-    if (userStr) return JSON.parse(userStr);
-    return null;
+    return useAuthStore.getState().user;
   },
 
-  updateStoredUser(user: any) {
-    localStorage.setItem('user', JSON.stringify(user));
+  updateStoredUser(user: AuthUser) {
+    const current = useAuthStore.getState().user;
+    useAuthStore.getState().setUser({
+      ...(current || {}),
+      ...(user || {}),
+    } as AuthUser);
+  },
+
+  async initialize() {
+    try {
+      const refreshResponse = await api.post('/auth/refresh');
+      const accessToken = refreshResponse.data.data.accessToken as string;
+      useAuthStore.getState().setAccessToken(accessToken);
+
+      const meResponse = await api.get('/users/me');
+      useAuthStore.getState().setUser(meResponse.data.data as AuthUser);
+    } catch {
+      useAuthStore.getState().clear();
+    }
   }
 };

@@ -4,10 +4,12 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'react-hot-toast';
 import { useState } from 'react';
 import { ConfirmActionModal } from '@/components/common/ConfirmActionModal';
+import { authService } from '@/services/auth.service';
 
 export function SysAdminUsers() {
     const { t } = useTranslation();
     const queryClient = useQueryClient();
+    const currentUser = authService.getCurrentUser();
     const [confirmModal, setConfirmModal] = useState<{
         isOpen: boolean;
         title: string;
@@ -36,11 +38,24 @@ export function SysAdminUsers() {
         onError: () => toast.error(t('sysadmin.user_updated_failed') || 'Failed to update user'),
     });
 
+    const deleteMutation = useMutation({
+        mutationFn: (userId: string) => sysAdminService.deleteUser(userId),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['sysadmin-users'] });
+            queryClient.invalidateQueries({ queryKey: ['sysadmin-stats'] });
+            toast.success(t('sysadmin.user_deleted_success') || 'User deleted successfully');
+        },
+        onError: (err: any) => {
+            const msg = err?.response?.data?.error?.message || err?.response?.data?.message;
+            toast.error(msg || t('sysadmin.user_deleted_failed') || 'Failed to delete user');
+        },
+    });
+
     const handleRoleChange = (userId: string, role: string, userName: string) => {
         setConfirmModal({
             isOpen: true,
-            title: t('sysadmin.change_role_title') || 'Change System Role',
-            description: t('sysadmin.change_role_desc', { name: userName, role }) || `Are you sure you want to change ${userName}'s role to ${role}? This will affect their permissions across the entire platform.`,
+            title: t('sysadmin.change_role_title', 'Change System Role'),
+            description: String(t('sysadmin.change_role_desc', { name: userName, role, defaultValue: `Are you sure you want to change ${userName}'s role to ${role}? This will affect their permissions across the entire platform.` } as any)),
             variant: 'warning',
             onConfirm: () => {
                 updateMutation.mutate({ userId, data: { role } });
@@ -55,13 +70,42 @@ export function SysAdminUsers() {
         
         setConfirmModal({
             isOpen: true,
-            title: isSuspending ? t('sysadmin.suspend_user_title') || 'Suspend User' : t('sysadmin.activate_user_title') || 'Activate User',
+            title: isSuspending ? t('sysadmin.suspend_user_title', 'Suspend User') : t('sysadmin.activate_user_title', 'Activate User'),
             description: isSuspending 
-                ? t('sysadmin.suspend_user_desc', { name: userName }) || `Are you sure you want to suspend ${userName}? They will lose all access to the platform immediately.`
-                : t('sysadmin.activate_user_desc', { name: userName }) || `Are you sure you want to reactivate ${userName}'s account?`,
+                ? String(t('sysadmin.suspend_user_desc', { name: userName, defaultValue: `Are you sure you want to suspend ${userName}? They will lose all access to the platform immediately.` } as any))
+                : String(t('sysadmin.activate_user_desc', { name: userName, defaultValue: `Are you sure you want to reactivate ${userName}'s account?` } as any)),
             variant: isSuspending ? 'danger' : 'success',
             onConfirm: () => {
                 updateMutation.mutate({ userId, data: { status: nextStatus } });
+                setConfirmModal(prev => ({ ...prev, isOpen: false }));
+            }
+        });
+    };
+
+    const handleDeleteUser = (userId: string, userRole: string, userName: string, adminGroupsCount: number) => {
+        if (userRole === 'SYS_ADMIN') {
+            toast.error(t('sysadmin.cannot_delete_sysadmin', 'Cannot delete a System Admin user'));
+            return;
+        }
+
+        if (currentUser?.id && currentUser.id === userId) {
+            toast.error(t('sysadmin.cannot_delete_self', 'You cannot delete your own account'));
+            return;
+        }
+
+        const extra = adminGroupsCount > 0
+            ? t('sysadmin.delete_user_reassign', { count: adminGroupsCount, defaultValue: `Their ${adminGroupsCount} groups will be reassigned to you.` } as any)
+            : '';
+
+        setConfirmModal({
+            isOpen: true,
+            title: t('sysadmin.delete_user_title', 'Delete User'),
+            description:
+                String(t('sysadmin.delete_user_desc', { name: userName, defaultValue: `This will immediately disable ${userName}'s account and remove access. ${extra}` } as any)) ||
+                `This will immediately disable ${userName}'s account and remove access. ${extra}`,
+            variant: 'danger',
+            onConfirm: () => {
+                deleteMutation.mutate(userId);
                 setConfirmModal(prev => ({ ...prev, isOpen: false }));
             }
         });
@@ -146,15 +190,25 @@ export function SysAdminUsers() {
                                         </span>
                                     </td>
                                     <td className="px-8 py-5 text-right">
-                                        <button
-                                            onClick={() => handleStatusToggle(u.id, u.status, u.fullName)}
-                                            className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${u.status === 'ACTIVE'
-                                                ? 'bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20'
-                                                : 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20'
-                                                }`}
-                                        >
-                                            {u.status === 'ACTIVE' ? t('common.suspend') || 'Suspend' : t('common.activate') || 'Activate'}
-                                        </button>
+                                        <div className="flex items-center justify-end gap-2">
+                                            <button
+                                                onClick={() => handleStatusToggle(u.id, u.status, u.fullName)}
+                                                disabled={u.role === 'SYS_ADMIN'}
+                                                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all disabled:opacity-40 disabled:cursor-not-allowed ${u.status === 'ACTIVE'
+                                                    ? 'bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20'
+                                                    : 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20'
+                                                    }`}
+                                            >
+                                                {u.status === 'ACTIVE' ? t('common.suspend') || 'Suspend' : t('common.activate') || 'Activate'}
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteUser(u.id, u.role, u.fullName, u._count.adminGroups)}
+                                                disabled={u.role === 'SYS_ADMIN' || (currentUser?.id && currentUser.id === u.id) || deleteMutation.isPending}
+                                                className="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border border-rose-500/20 disabled:opacity-40 disabled:cursor-not-allowed"
+                                            >
+                                                {t('common.delete') || 'Delete'}
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
@@ -176,7 +230,7 @@ export function SysAdminUsers() {
                 title={confirmModal.title}
                 description={confirmModal.description}
                 variant={confirmModal.variant}
-                isLoading={updateMutation.isPending}
+                isLoading={updateMutation.isPending || deleteMutation.isPending}
             />
         </div>
     );

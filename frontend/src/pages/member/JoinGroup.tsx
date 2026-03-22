@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { groupService } from '@/services/group.service';
 import { useTranslation } from 'react-i18next';
+import { useAuthStore } from '@/store/auth.store';
 
 export function JoinGroupPage() {
     const { t } = useTranslation();
@@ -11,8 +12,7 @@ export function JoinGroupPage() {
     const navigate = useNavigate();
     const [error, setError] = useState('');
 
-    // Check if user is logged in
-    const isLoggedIn = !!localStorage.getItem('accessToken');
+    const isLoggedIn = !!useAuthStore((s) => s.user);
 
     const { data: invitation, isLoading } = useQuery({
         queryKey: ['invitation', token],

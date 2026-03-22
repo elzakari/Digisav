@@ -49,6 +49,8 @@ export class UserController {
                     email: true,
                     phoneNumber: true,
                     fullName: true,
+                    role: true,
+                    status: true,
                     language: true,
                     theme: true,
                     defaultCurrency: true,

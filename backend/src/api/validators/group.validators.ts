@@ -23,6 +23,7 @@ export const updateGroupSchema = z.object({
   body: z.object({
     groupName: z.string().min(3).max(100).optional(),
     contributionAmount: z.number().positive().max(10000000).optional(),
+    currencyCode: z.string().length(3).optional(),
     maxMembers: z.number().int().min(3).max(100).optional(),
     startDate: dateSchema,
     gracePeriodDays: z.number().int().min(0).max(30).optional(),

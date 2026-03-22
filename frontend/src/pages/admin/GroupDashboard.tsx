@@ -3,7 +3,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { groupService } from '@/services/group.service';
-import { contributionService } from '@/services/contribution.service';
 import { RecordContributionModal } from '@/components/admin/RecordContributionModal';
 import { RecordPayoutModal } from '@/components/admin/RecordPayoutModal';
 import { transactionService } from '@/services/transaction.service';
@@ -16,17 +15,22 @@ import { SendNotificationModal } from '@/components/admin/SendNotificationModal'
 import { InviteMembersModal } from '@/components/admin/InviteMembersModal';
 import { ReportsModal } from '@/components/admin/ReportsModal';
 import { formatCurrency } from '@/utils/currencyFormatter';
+import { KpiCard } from '@/components/admin/dashboard/KpiCard';
+import { ContributionsStatusPanel } from '@/components/admin/dashboard/ContributionsStatusPanel';
+import { RecentActivityPanel } from '@/components/admin/dashboard/RecentActivityPanel';
+import { BarChart3, Bell, Coins, FileDown, Settings2, ShieldAlert, Trash2, UserPlus, Wallet } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 export function GroupDashboard() {
   const { t } = useTranslation();
   const { groupId } = useParams<{ groupId: string }>();
   const navigate = useNavigate();
   const user = authService.getCurrentUser();
-  const isSystemAdmin = user?.role === 'ADMIN';
+  const isSystemAdmin = user?.role === 'SYS_ADMIN';
 
-  const { data: stats, isLoading: statsLoading } = useQuery({
-    queryKey: ['group-stats', groupId],
-    queryFn: () => contributionService.getGroupStats(groupId!),
+  const { data: dashboard, isLoading: dashboardLoading } = useQuery({
+    queryKey: ['group-dashboard', groupId],
+    queryFn: () => groupService.getGroupDashboard(groupId!),
     enabled: !!groupId,
   });
 
@@ -65,6 +69,7 @@ export function GroupDashboard() {
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
   const [isBulkProcessing, setIsBulkProcessing] = useState(false);
   const [isReportsModalOpen, setIsReportsModalOpen] = useState(false);
+  const [cycleFilter, setCycleFilter] = useState<'due' | 'paid' | 'past_due'>('due');
 
   const toggleSelectMember = (memberId: string) => {
     setSelectedMemberIds(prev => 
@@ -99,7 +104,10 @@ export function GroupDashboard() {
 
   const queryClient = useQueryClient();
 
-  const handleMemberAction = async (action: 'edit' | 'remove', member: any) => {
+  const handleMemberAction = async (
+    action: 'edit' | 'remove' | 'approve' | 'reject' | 'suspend' | 'activate',
+    member: any
+  ) => {
     if (action === 'edit') {
       setSelectedMember(member);
       setIsEditMemberModalOpen(true);
@@ -107,14 +115,40 @@ export function GroupDashboard() {
       return;
     }
 
-    if (window.confirm(t('common.are_you_sure_remove_member'))) {
-      try {
+    const confirmText: Record<string, string> = {
+      remove: t('common.are_you_sure_remove_member') || 'Are you sure you want to remove this member?',
+      approve: t('admin.approve_member_confirm') || 'Approve this member and activate their access?',
+      reject: t('admin.reject_member_confirm') || 'Reject this member request? They will be set inactive.',
+      suspend: t('admin.suspend_member_confirm') || 'Suspend this member? They will lose access to the group.',
+      activate: t('admin.activate_member_confirm') || 'Activate this member?',
+    };
+
+    if (!window.confirm(confirmText[action] || t('common.are_you_sure'))) {
+      setMemberMenuOpenId(null);
+      return;
+    }
+
+    try {
+      if (action === 'remove') {
         await groupService.removeMember(member.id);
-        queryClient.invalidateQueries({ queryKey: ['group', groupId] });
-        setMemberMenuOpenId(null);
-      } catch (err: any) {
-        console.error('Member action failed', err?.response?.data?.message || err);
+      } else if (action === 'approve') {
+        await groupService.approveMember(member.id);
+      } else if (action === 'reject') {
+        await groupService.rejectMember(member.id);
+      } else if (action === 'suspend') {
+        await groupService.suspendMember(member.id);
+      } else if (action === 'activate') {
+        await groupService.updateMember(member.id, { status: 'ACTIVE' });
       }
+
+      queryClient.invalidateQueries({ queryKey: ['group', groupId] });
+      toast.success(t('common.saved') || 'Saved');
+    } catch (err: any) {
+      const msg = err?.response?.data?.error?.message || err?.response?.data?.message;
+      toast.error(msg || t('common.error') || 'Action failed');
+      console.error('Member action failed', err);
+    } finally {
+      setMemberMenuOpenId(null);
     }
   };
 
@@ -122,11 +156,14 @@ export function GroupDashboard() {
     setIsReportsModalOpen(true);
   };
 
-  if (statsLoading || historyLoading || groupLoading) return (
+  if (dashboardLoading || historyLoading || groupLoading) return (
     <div className="flex items-center justify-center min-h-[60vh]">
       <div className="animate-pulse text-indigo-400 font-medium text-lg">{t('common.loading')}</div>
     </div>
   );
+
+  const currencyCode = dashboard?.group?.currencyCode || group?.currencyCode || 'KES';
+  const stats = dashboard?.stats;
 
   return (
     <div className="w-full space-y-10 animate-fade-in">
@@ -140,96 +177,104 @@ export function GroupDashboard() {
           </div>
           <h1 className="text-4xl font-bold tracking-tight">{t('dashboard.title')}</h1>
         </div>
-        <div className="flex items-center gap-3 flex-wrap">
-          <button
-            onClick={() => setIsInviteModalOpen(true)}
-            className="glass-button btn-primary flex items-center gap-2"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-            </svg>
-            {t('dashboard.invite_members')}
-          </button>
-          <button
-            onClick={() => setIsContributionModalOpen(true)}
-            className="glass-button btn-success flex items-center gap-2"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            {t('dashboard.record_payment')}
-          </button>
-          <button
-            onClick={() => setIsPayoutModalOpen(true)}
-            className="glass-button btn-warning flex items-center gap-2 text-rose-400 border-rose-500/30 hover:bg-rose-500/10"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-            </svg>
-            {t('dashboard.record_payout') || 'Record Payout'}
-          </button>
-          <button
-            onClick={handleDownloadReport}
-            className="glass-button btn-secondary flex items-center gap-2"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            {t('dashboard.export_report')}
-          </button>
-          <button
-            onClick={() => setIsNotificationModalOpen(true)}
-            className="glass-button flex items-center gap-2 text-indigo-400 border-indigo-500/30 hover:bg-indigo-500/10"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-            </svg>
-            {t('common.send_notification') || 'Send Notification'}
-          </button>
-          <button
-            onClick={() => setIsEditModalOpen(true)}
-            className="glass-button btn-info flex items-center gap-2"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
-            {t('dashboard.edit_settings')}
-          </button>
-          <button
-            onClick={() => setIsDeleteDialogOpen(true)}
-            className="glass-button btn-danger flex items-center gap-2"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
-            {(group?.status === 'DRAFT' || isSystemAdmin) ? t('dashboard.delete_group') : t('dashboard.close_group')}
-          </button>
+        <div className="flex flex-col items-start gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => setIsInviteModalOpen(true)}
+              className="glass-button btn-primary px-5 py-2.5 text-sm rounded-2xl flex items-center gap-2"
+            >
+              <UserPlus className="w-4 h-4" />
+              {t('dashboard.invite_members')}
+            </button>
+            <button
+              onClick={() => setIsContributionModalOpen(true)}
+              className="glass-button btn-success px-5 py-2.5 text-sm rounded-2xl flex items-center gap-2"
+            >
+              <Coins className="w-4 h-4" />
+              {t('dashboard.record_payment')}
+            </button>
+            <button
+              onClick={() => setIsPayoutModalOpen(true)}
+              className="glass-button btn-warning px-5 py-2.5 text-sm rounded-2xl flex items-center gap-2"
+            >
+              <Wallet className="w-4 h-4" />
+              {t('dashboard.record_payout') || 'Record Payout'}
+            </button>
+            <button
+              onClick={handleDownloadReport}
+              className="glass-button btn-secondary px-5 py-2.5 text-sm rounded-2xl flex items-center gap-2"
+            >
+              <FileDown className="w-4 h-4" />
+              {t('dashboard.export_report')}
+            </button>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => setIsNotificationModalOpen(true)}
+              className="glass-button btn-secondary px-4 py-2 text-xs rounded-2xl flex items-center gap-2"
+            >
+              <Bell className="w-4 h-4" />
+              {t('common.send_notification') || 'Send Notification'}
+            </button>
+            <button
+              onClick={() => setIsEditModalOpen(true)}
+              className="glass-button btn-info px-4 py-2 text-xs rounded-2xl flex items-center gap-2"
+            >
+              <Settings2 className="w-4 h-4" />
+              {t('dashboard.edit_settings')}
+            </button>
+            <button
+              onClick={() => setIsDeleteDialogOpen(true)}
+              className="glass-button btn-danger px-4 py-2 text-xs rounded-2xl flex items-center gap-2"
+            >
+              <Trash2 className="w-4 h-4" />
+              {(group?.status === 'DRAFT' || isSystemAdmin) ? t('dashboard.delete_group') : t('dashboard.close_group')}
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
+        <KpiCard
           title={t('dashboard.total_expected')}
-          value={formatCurrency(stats?.totalExpected || 0, 0, stats?.currencyCode)}
-          type="info"
+          value={formatCurrency(stats?.totalExpected || 0, 0, currencyCode)}
+          hint={dashboard?.cycle?.cycleNumber ? `Cycle ${dashboard.cycle.cycleNumber}` : undefined}
+          icon={<Coins className="w-5 h-5" />}
+          onClick={() => setCycleFilter('due')}
         />
-        <StatCard
+        <KpiCard
           title={t('dashboard.total_collected')}
-          value={formatCurrency(stats?.totalCollected || 0, 0, stats?.currencyCode)}
-          type="success"
+          value={formatCurrency(stats?.totalCollected || 0, 0, currencyCode)}
+          hint={dashboard?.cycle?.counts?.PAID ? `${dashboard.cycle.counts.PAID} paid this cycle` : undefined}
+          icon={<Wallet className="w-5 h-5" />}
+          onClick={() => setCycleFilter('paid')}
         />
-        <StatCard
+        <KpiCard
           title={t('dashboard.outstanding')}
-          value={formatCurrency(stats?.outstanding || 0, 0, stats?.currencyCode)}
-          type="warning"
+          value={formatCurrency(stats?.outstanding || 0, 0, currencyCode)}
+          hint={dashboard?.cycle?.counts?.DUE ? `${dashboard.cycle.counts.DUE} due this cycle` : undefined}
+          icon={<BarChart3 className="w-5 h-5" />}
+          onClick={() => setCycleFilter('due')}
         />
-        <StatCard
-          title={t('dashboard.compliance_rate')}
-          value={stats?.complianceRate ? `${stats.complianceRate.toFixed(1)}%` : '0%'}
-          type={stats?.complianceRate >= 90 ? 'success' : 'danger'}
+        <KpiCard
+          title="Past due"
+          value={`${(dashboard?.cycle?.counts?.OVERDUE || 0) + (dashboard?.cycle?.counts?.DEFAULTED || 0)}`}
+          hint={dashboard?.cycle?.totals?.pastDue ? formatCurrency(dashboard.cycle.totals.pastDue, 0, currencyCode) : undefined}
+          icon={<ShieldAlert className="w-5 h-5" />}
+          onClick={() => setCycleFilter('past_due')}
         />
       </div>
+
+      {dashboard?.cycle && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="lg:col-span-7">
+            <ContributionsStatusPanel key={cycleFilter} cycle={dashboard.cycle} currencyCode={currencyCode} initialFilter={cycleFilter} />
+          </div>
+          <div className="lg:col-span-5">
+            <RecentActivityPanel items={dashboard.recentActivity || []} currencyCode={currencyCode} />
+          </div>
+        </div>
+      )}
 
       {/* Tab Navigation */}
       <div className="flex space-x-4 border-b border-white/10 mb-6 overflow-x-auto no-scrollbar">
@@ -387,7 +432,7 @@ export function GroupDashboard() {
                       {m.accountNumber || t('common.pending')}
                     </td>
                     <td className="px-8 py-5 text-sm font-semibold text-rose-400">
-                      {formatCurrency(m.user?.savingsGoals?.reduce((acc: number, g: any) => acc + Number(g.currentAmount), 0) || 0, 0, stats?.currencyCode)}
+                      {formatCurrency(m.user?.savingsGoals?.reduce((acc: number, g: any) => acc + Number(g.currentAmount), 0) || 0, 0, currencyCode)}
                     </td>
                     <td className="px-8 py-5">
                       <span className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg ${m.status === 'ACTIVE' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
@@ -405,10 +450,40 @@ export function GroupDashboard() {
                             className="p-2 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors text-xl leading-none"
                           >⋮</button>
                           {memberMenuOpenId === m.id && (
-                            <div className="absolute right-0 top-10 z-30 w-44 bg-slate-900/95 border border-white/10 rounded-xl overflow-hidden shadow-2xl">
+                            <div className="absolute right-0 top-10 z-30 w-48 bg-slate-900/95 border border-white/10 rounded-xl overflow-hidden shadow-2xl">
+                              {m.status === 'PENDING' ? (
+                                <>
+                                  <button
+                                    onClick={() => handleMemberAction('approve', m)}
+                                    className="w-full px-4 py-3 text-sm text-left text-emerald-400 hover:bg-emerald-500/10 transition-colors border-b border-white/5 flex items-center gap-2"
+                                  >
+                                    <span>✅</span> {t('common.activate') || 'Approve'}
+                                  </button>
+                                  <button
+                                    onClick={() => handleMemberAction('reject', m)}
+                                    className="w-full px-4 py-3 text-sm text-left text-rose-400 hover:bg-rose-500/10 transition-colors border-b border-white/5 flex items-center gap-2"
+                                  >
+                                    <span>✖️</span> {t('common.reject') || 'Reject'}
+                                  </button>
+                                </>
+                              ) : m.status === 'SUSPENDED' || m.status === 'INACTIVE' ? (
+                                <button
+                                  onClick={() => handleMemberAction('activate', m)}
+                                  className="w-full px-4 py-3 text-sm text-left text-emerald-400 hover:bg-emerald-500/10 transition-colors border-b border-white/5 flex items-center gap-2"
+                                >
+                                  <span>✅</span> {t('common.activate') || 'Activate'}
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => handleMemberAction('suspend', m)}
+                                  className="w-full px-4 py-3 text-sm text-left text-amber-400 hover:bg-amber-500/10 transition-colors border-b border-white/5 flex items-center gap-2"
+                                >
+                                  <span>⏸</span> {t('common.suspend') || 'Suspend'}
+                                </button>
+                              )}
                               <button
                                 onClick={() => handleMemberAction('edit', m)}
-                                className="w-full px-4 py-3 text-sm text-left text-amber-400 hover:bg-amber-500/10 transition-colors border-b border-white/5 flex items-center gap-2"
+                                className="w-full px-4 py-3 text-sm text-left text-indigo-300 hover:bg-white/10 transition-colors border-b border-white/5 flex items-center gap-2"
                               >
                                 <span>✏️</span> {t('common.edit')}
                               </button>
@@ -446,14 +521,14 @@ export function GroupDashboard() {
       <RecordContributionModal
         groupId={groupId!}
         members={group?.members || []}
-        currencyCode={stats?.currencyCode || 'KES'}
+        currencyCode={currencyCode}
         isOpen={isContributionModalOpen}
         onClose={() => setIsContributionModalOpen(false)}
       />
       <RecordPayoutModal
         groupId={groupId!}
         members={group?.members || []}
-        currencyCode={stats?.currencyCode || 'KES'}
+        currencyCode={currencyCode}
         isOpen={isPayoutModalOpen}
         onClose={() => setIsPayoutModalOpen(false)}
       />
@@ -533,26 +608,6 @@ export function GroupDashboard() {
         onClose={() => setIsReportsModalOpen(false)}
         groupId={groupId!}
       />
-    </div>
-  );
-}
-
-function StatCard({ title, value, type = 'info' }: any) {
-  const styles: any = {
-    info: 'from-indigo-500/20 to-transparent text-indigo-400 border-indigo-500/20',
-    success: 'from-emerald-500/20 to-transparent text-emerald-400 border-emerald-500/20',
-    warning: 'from-amber-500/20 to-transparent text-amber-400 border-amber-500/20',
-    danger: 'from-rose-500/20 to-transparent text-rose-400 border-rose-500/20',
-  };
-
-  return (
-    <div className={`glass-card p-6 bg-gradient-to-br ${styles[type]} border`}>
-      <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4">{title}</h3>
-      <div className="flex items-baseline gap-1">
-        <p className="text-3xl font-black text-white tracking-tight">
-          {value}
-        </p>
-      </div>
     </div>
   );
 }

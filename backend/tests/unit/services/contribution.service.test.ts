@@ -3,6 +3,7 @@ import { PrismaClient, PaymentMethod } from '@prisma/client';
 import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
 
 import { LedgerService } from '@/services/ledger/ledger.service';
+import { NotificationService } from '@/services/notifications/notification.service';
 
 // Mock the entire prisma client
 jest.mock('@prisma/client', () => ({
@@ -20,6 +21,7 @@ jest.mock('@prisma/client', () => ({
 
 // Mock the ledger service
 jest.mock('@/services/ledger/ledger.service');
+jest.mock('@/services/notifications/notification.service');
 
 describe('ContributionService', () => {
   let service: ContributionService;
@@ -33,6 +35,10 @@ describe('ContributionService', () => {
     (LedgerService as jest.Mock).mockImplementation(() => ({
       createTransaction: jest.fn().mockResolvedValue({}),
       verifyChain: jest.fn().mockResolvedValue(true)
+    }));
+
+    (NotificationService as jest.Mock).mockImplementation(() => ({
+      createNotification: jest.fn().mockResolvedValue({}),
     }));
 
     // We need to reinstantiate service to pick up the mocked prisma
@@ -81,7 +87,7 @@ describe('ContributionService', () => {
 
       const result = await service.recordContribution(mockData);
 
-      expect(result.status).toBe('COMPLETED');
+      expect((result as any).status).toBe('COMPLETED');
       expect(mockPrisma.contribution.upsert).toHaveBeenCalled();
     });
   });

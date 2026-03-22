@@ -21,6 +21,11 @@ export const sysAdminService = {
         return response.data.data;
     },
 
+    deleteUser: async (userId: string) => {
+        const response = await api.delete(`/sysadmin/users/${userId}`);
+        return response.data.data;
+    },
+
     updateGroupStatus: async (groupId: string, status: string) => {
         const response = await api.patch(`/sysadmin/groups/${groupId}`, { status });
         return response.data.data;

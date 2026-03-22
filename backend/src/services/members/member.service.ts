@@ -127,7 +127,7 @@ export class MemberService {
       throw new NotFoundError('Member');
     }
 
-    if (member.group.adminUserId !== adminUserId && userRole !== 'ADMIN') {
+    if (member.group.adminUserId !== adminUserId && userRole !== 'ADMIN' && userRole !== 'SYS_ADMIN') {
       throw new ForbiddenError('Only group admin or system admin can approve members');
     }
 
@@ -175,7 +175,7 @@ export class MemberService {
       throw new NotFoundError('Member');
     }
 
-    if (member.group.adminUserId !== adminUserId && userRole !== 'ADMIN') {
+    if (member.group.adminUserId !== adminUserId && userRole !== 'ADMIN' && userRole !== 'SYS_ADMIN') {
       throw new ForbiddenError('Only group admin or system admin can reject members');
     }
 
@@ -198,7 +198,7 @@ export class MemberService {
       throw new NotFoundError('Member');
     }
 
-    if (member.group.adminUserId !== adminUserId && userRole !== 'ADMIN') {
+    if (member.group.adminUserId !== adminUserId && userRole !== 'ADMIN' && userRole !== 'SYS_ADMIN') {
       throw new ForbiddenError('Only group admin or system admin can suspend members');
     }
 
@@ -220,7 +220,7 @@ export class MemberService {
       throw new NotFoundError('Member');
     }
 
-    if (member.group.adminUserId !== adminUserId && userRole !== 'ADMIN') {
+    if (member.group.adminUserId !== adminUserId && userRole !== 'ADMIN' && userRole !== 'SYS_ADMIN') {
       throw new ForbiddenError('Only group admin or system admin can remove members');
     }
 
@@ -248,7 +248,7 @@ export class MemberService {
       throw new NotFoundError('Member');
     }
 
-    if (member.group.adminUserId !== adminUserId && userRole !== 'ADMIN') {
+    if (member.group.adminUserId !== adminUserId && userRole !== 'ADMIN' && userRole !== 'SYS_ADMIN') {
       throw new ForbiddenError('Only group admin or system admin can update member details');
     }
 
@@ -369,7 +369,7 @@ export class MemberService {
   async bulkUpdateMembers(groupId: string, memberIds: string[], data: any, adminUserId: string, userRole: string) {
     const group = await prisma.group.findUnique({ where: { id: groupId } });
     if (!group) throw new NotFoundError('Group');
-    if (group.adminUserId !== adminUserId && userRole !== 'ADMIN') {
+    if (group.adminUserId !== adminUserId && userRole !== 'ADMIN' && userRole !== 'SYS_ADMIN') {
       throw new ForbiddenError('Only group admin or system admin can perform bulk updates');
     }
 

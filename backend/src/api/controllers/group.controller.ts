@@ -87,6 +87,21 @@ export class GroupController {
     }
   }
 
+  async getGroupDashboard(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user!.id;
+      const { groupId } = req.params;
+      const data = await this.groupService.getGroupDashboard(groupId as string, userId, req.user!.role);
+
+      res.status(200).json({
+        success: true,
+        data,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async updateGroup(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const userId = req.user!.id;

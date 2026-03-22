@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { 
   X, 
@@ -14,7 +14,10 @@ import {
   MessageCircle
 } from 'lucide-react';
 import { contributionService } from '@/services/contribution.service';
+import { groupService } from '@/services/group.service';
 import { format } from 'date-fns';
+import { useQuery } from '@tanstack/react-query';
+import { toast } from 'react-hot-toast';
 
 interface ReportsModalProps {
   isOpen: boolean;
@@ -27,93 +30,152 @@ export function ReportsModal({ isOpen, onClose, groupId }: ReportsModalProps) {
   const [reportType, setReportType] = useState<'contributions' | 'payouts' | 'audit'>('contributions');
   const [dateRange, setDateRange] = useState<'this_month' | 'last_month' | 'custom'>('this_month');
   const [formatType, setFormatType] = useState<'pdf' | 'csv'>('pdf');
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [isGeneratingDownload, setIsGeneratingDownload] = useState(false);
+  const [isGeneratingShare, setIsGeneratingShare] = useState(false);
+  const [memberId, setMemberId] = useState<string>('');
+  const [shareLink, setShareLink] = useState<string>('');
   
   const [startDate, setStartDate] = useState(format(new Date(new Date().getFullYear(), new Date().getMonth(), 1), 'yyyy-MM-dd'));
   const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
 
+  const { data: members, isLoading: isMembersLoading } = useQuery({
+    queryKey: ['group-members', groupId],
+    queryFn: () => groupService.getGroupMembers(groupId),
+    enabled: isOpen,
+  });
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+    if (reportType === 'audit') {
+      setMemberId('');
+    }
+    setShareLink('');
+  }, [isOpen, reportType, dateRange, formatType, memberId]);
+
+  const derivedPeriod = useMemo(() => {
+    if (dateRange === 'custom') {
+      return {
+        startIso: new Date(startDate).toISOString(),
+        endIso: new Date(endDate).toISOString(),
+        label: `${startDate} → ${endDate}`,
+      };
+    }
+
+    const now = new Date();
+    if (dateRange === 'last_month') {
+      const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const end = new Date(now.getFullYear(), now.getMonth(), 0);
+      return {
+        startIso: start.toISOString(),
+        endIso: end.toISOString(),
+        label: `${format(start, 'yyyy-MM-dd')} → ${format(end, 'yyyy-MM-dd')}`,
+      };
+    }
+
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = now;
+    return {
+      startIso: start.toISOString(),
+      endIso: end.toISOString(),
+      label: `${format(start, 'yyyy-MM-dd')} → ${format(end, 'yyyy-MM-dd')}`,
+    };
+  }, [dateRange, startDate, endDate]);
+
+  const selectedMemberName = useMemo(() => {
+    if (!memberId) return null;
+    return members?.find((m: any) => m.id === memberId)?.user?.fullName || null;
+  }, [members, memberId]);
+
+  const canScopeToMember = reportType === 'contributions' || reportType === 'payouts';
+
   if (!isOpen) return null;
 
+  const sanitizeFilePart = (value: string) => {
+    return value
+      .trim()
+      .replace(/\s+/g, '_')
+      .replace(/[^a-zA-Z0-9_-]/g, '_')
+      .slice(0, 60);
+  };
+
   const handleGenerate = async () => {
-    setIsGenerating(true);
+    if (dateRange === 'custom' && new Date(startDate) > new Date(endDate)) {
+      toast.error(t('reports.invalid_date_range', 'Start date must be before end date'));
+      return;
+    }
+
+    setIsGeneratingDownload(true);
     try {
-      let finalStart = startDate;
-      let finalEnd = endDate;
-
-      if (dateRange === 'this_month') {
-        const now = new Date();
-        finalStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-        finalEnd = now.toISOString();
-      } else if (dateRange === 'last_month') {
-        const now = new Date();
-        finalStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
-        finalEnd = new Date(now.getFullYear(), now.getMonth(), 0).toISOString();
-      } else {
-        finalStart = new Date(startDate).toISOString();
-        finalEnd = new Date(endDate).toISOString();
-      }
-
       const blob = await contributionService.downloadReport(
         groupId,
-        finalStart,
-        finalEnd,
+        derivedPeriod.startIso,
+        derivedPeriod.endIso,
         reportType,
-        formatType
+        formatType,
+        memberId || undefined
       );
+
+      const memberPart = selectedMemberName ? `-${sanitizeFilePart(selectedMemberName)}` : memberId ? `-${sanitizeFilePart(memberId)}` : '';
+      const datePart = sanitizeFilePart(derivedPeriod.label.replace(' → ', '_to_'));
+      const fileName = `${reportType}${memberPart}-report-${datePart}.${formatType}`;
 
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${reportType}-report-${groupId}.${formatType}`;
+      a.download = fileName;
       a.click();
       window.URL.revokeObjectURL(url);
-      onClose();
+      toast.success(t('reports.download_ready', 'Report downloaded'));
     } catch (error) {
       console.error('Failed to generate report', error);
-      alert(t('common.report_error') || 'Failed to generate report. Please try again.');
+      toast.error(t('common.report_error') || 'Failed to generate report. Please try again.');
     } finally {
-      setIsGenerating(false);
+      setIsGeneratingDownload(false);
     }
   };
   
   const handleWhatsAppShare = async () => {
-    setIsGenerating(true);
+    if (dateRange === 'custom' && new Date(startDate) > new Date(endDate)) {
+      toast.error(t('reports.invalid_date_range', 'Start date must be before end date'));
+      return;
+    }
+
+    setIsGeneratingShare(true);
     try {
-      let finalStart = startDate;
-      let finalEnd = endDate;
-
-      if (dateRange === 'this_month') {
-        const now = new Date();
-        finalStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-        finalEnd = now.toISOString();
-      } else if (dateRange === 'last_month') {
-        const now = new Date();
-        finalStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
-        finalEnd = new Date(now.getFullYear(), now.getMonth(), 0).toISOString();
-      } else {
-        finalStart = new Date(startDate).toISOString();
-        finalEnd = new Date(endDate).toISOString();
-      }
-
       const shareLink = await contributionService.getShareLink(groupId, {
-        startDate: finalStart,
-        endDate: finalEnd,
+        startDate: derivedPeriod.startIso,
+        endDate: derivedPeriod.endIso,
         type: reportType,
-        format: formatType
+        format: formatType,
+        memberId: memberId || undefined,
       });
 
       const reportName = t(`reports.${reportType}`);
+      const memberName = selectedMemberName;
       const text = encodeURIComponent(
-        `Hi, please find the ${reportName} report for our group here: ${shareLink}\n\nGenerated via DigiSav.`
+        `Hi, please find the ${memberName ? memberName + " " : ""}${reportName} report here: ${shareLink}\n\nGenerated via DigiSav.`
       );
-      
+
+      setShareLink(shareLink);
+      toast.success(t('reports.share_link_ready', 'Share link created'));
       window.open(`https://wa.me/?text=${text}`, '_blank');
-      onClose();
     } catch (error) {
       console.error('Failed to share report', error);
-      alert(t('common.report_error') || 'Failed to share report. Please try again.');
+      toast.error(t('common.report_error') || 'Failed to share report. Please try again.');
     } finally {
-      setIsGenerating(false);
+      setIsGeneratingShare(false);
+    }
+  };
+
+  const handleCopyLink = async () => {
+    if (!shareLink) return;
+    try {
+      await navigator.clipboard.writeText(shareLink);
+      toast.success(t('reports.link_copied', 'Link copied'));
+    } catch {
+      toast.error(t('reports.copy_failed', 'Could not copy link'));
     }
   };
 
@@ -231,6 +293,59 @@ export function ReportsModal({ isOpen, onClose, groupId }: ReportsModalProps) {
             </div>
           </div>
 
+          {canScopeToMember && (
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5 ml-1">
+                {t('reports.scope', 'Scope')}
+              </label>
+              <div className="relative group/select">
+                <select
+                  value={memberId}
+                  onChange={(e) => setMemberId(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500/50 appearance-none transition-all group-hover/select:border-white/20"
+                  disabled={isMembersLoading}
+                >
+                  <option value="" className="bg-slate-900">
+                    {t('reports.all_members', 'All members')}
+                  </option>
+                  {(members || []).map((m: any) => (
+                    <option key={m.id} value={m.id} className="bg-slate-900">
+                      {m.user?.fullName || m.id}
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
+              <div className="text-[10px] text-slate-500 ml-1">
+                {isMembersLoading ? t('common.loading', 'Loading...') : selectedMemberName ? `${t('reports.for_member', 'For')} ${selectedMemberName}` : t('reports.for_group', 'For the whole group')}
+              </div>
+            </div>
+          )}
+
+          <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 flex items-start justify-between gap-4">
+            <div className="space-y-0.5">
+              <div className="text-xs font-bold text-white">{t('reports.summary', 'Summary')}</div>
+              <div className="text-[10px] text-slate-400">
+                {t('reports.period', 'Time Period')}: {derivedPeriod.label}
+              </div>
+              <div className="text-[10px] text-slate-400">
+                {t('reports.format', 'Format')}: {formatType.toUpperCase()} · {t(`reports.${reportType}`)}
+              </div>
+            </div>
+            {shareLink ? (
+              <button
+                onClick={handleCopyLink}
+                className="px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 transition-colors text-[10px] font-bold text-slate-200"
+              >
+                {t('reports.copy_link', 'Copy link')}
+              </button>
+            ) : null}
+          </div>
+
           {/* Custom Date Selection */}
           {dateRange === 'custom' && (
             <div className="grid grid-cols-2 gap-4 animate-in slide-in-from-top-2 duration-300">
@@ -266,10 +381,10 @@ export function ReportsModal({ isOpen, onClose, groupId }: ReportsModalProps) {
             </button>
             <button
               onClick={handleGenerate}
-              disabled={isGenerating}
+              disabled={isGeneratingDownload || isGeneratingShare}
               className="flex-1 bg-indigo-500 hover:bg-indigo-400 disabled:bg-indigo-500/50 px-4 py-3 rounded-xl text-white text-sm font-bold shadow-lg shadow-indigo-500/25 transition-all text-center flex items-center justify-center gap-2 group"
             >
-              {isGenerating ? (
+              {isGeneratingDownload ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
                   {t('common.processing')}
@@ -285,11 +400,11 @@ export function ReportsModal({ isOpen, onClose, groupId }: ReportsModalProps) {
           
           <button
             onClick={handleWhatsAppShare}
-            disabled={isGenerating}
+            disabled={isGeneratingDownload || isGeneratingShare}
             className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-[#25D366]/10 text-[#25D366] text-sm font-bold border border-[#25D366]/20 hover:bg-[#25D366]/20 transition-all group"
           >
             <MessageCircle className="w-4 h-4 group-hover:scale-110 transition-transform" />
-            {t('reports.share_whatsapp')}
+            {isGeneratingShare ? t('common.processing') : t('reports.share_whatsapp')}
           </button>
         </div>
       </div>

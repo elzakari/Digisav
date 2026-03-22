@@ -25,7 +25,7 @@ router.get('/member/stats', authenticate, controller.getMemberAggregateStats.bin
 // Get group by ID
 router.get('/:groupId', authenticate, controller.getGroupById.bind(controller));
 
-// Get group transactions
+router.get('/:groupId/dashboard', authenticate, requireGroupAdmin, controller.getGroupDashboard.bind(controller));
 router.get('/:groupId/transactions', authenticate, controller.getGroupTransactions.bind(controller));
 
 // Update group
@@ -46,6 +46,7 @@ router.delete('/:groupId', authenticate, requireGroupAdmin, controller.deleteGro
 // Group Admin specific settings
 router.patch('/:groupId/fees', authenticate, requireGroupAdmin, controller.updateGroupFees.bind(controller));
 router.patch('/:groupId/micro-investments', authenticate, requireGroupAdmin, controller.toggleMicroInvestments.bind(controller));
+router.post('/:groupId/notifications', authenticate, requireGroupAdmin, controller.sendGroupNotification.bind(controller));
 router.post('/:groupId/notify', authenticate, requireGroupAdmin, controller.sendGroupNotification.bind(controller));
 
 export default router;

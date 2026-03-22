@@ -373,6 +373,22 @@
         "contributions_volume": "Contributions Volume",
         "payouts_volume": "Payouts Volume",
         "platform_users": "Platform Users",
+        "groups_moderation": "Groups Moderation",
+        "user_roles": "User Roles",
+        "user_roles_desc": "Platform-wide roles and status distribution",
+        "change_role_title": "Change System Role",
+        "change_role_desc": "Are you sure you want to change {{name}}'s role to {{role}}? This will affect their permissions across the entire platform.",
+        "suspend_user_title": "Suspend User",
+        "suspend_user_desc": "Are you sure you want to suspend {{name}}? They will lose all access to the platform immediately.",
+        "activate_user_title": "Activate User",
+        "activate_user_desc": "Are you sure you want to reactivate {{name}}'s account?",
+        "delete_user_title": "Delete User",
+        "delete_user_desc": "This will immediately disable {{name}}'s account and remove access.",
+        "delete_user_reassign": "Their {{count}} groups will be reassigned to you.",
+        "cannot_delete_sysadmin": "Cannot delete a System Admin user",
+        "cannot_delete_self": "You cannot delete your own account",
+        "user_deleted_success": "User deleted successfully",
+        "user_deleted_failed": "Failed to delete user",
         "users_desc": "Manage all registered users and administrators across the DigiSav system.",
         "users_db": "All Users Database",
         "global_roster": "Global Roster",
@@ -412,6 +428,7 @@
         "audit_summary_desc": "Global balance and reconciliation",
         "generate": "Generate Report",
         "export_config": "Configure your data export",
-        "share_whatsapp": "Share via WhatsApp"
+        "share_whatsapp": "Share via WhatsApp",
+        "all_members": "All members"
     }
 }

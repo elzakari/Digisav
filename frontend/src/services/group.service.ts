@@ -26,6 +26,11 @@ export const groupService = {
     return response.data.data;
   },
 
+  async getGroupDashboard(groupId: string) {
+    const response = await api.get(`/groups/${groupId}/dashboard`);
+    return response.data.data;
+  },
+
   async updateGroup(groupId: string, data: any) {
     const response = await api.patch(`/groups/${groupId}`, data);
     return response.data.data;
@@ -58,6 +63,16 @@ export const groupService = {
 
   async suspendMember(memberId: string) {
     const response = await api.patch(`/members/${memberId}/suspend`);
+    return response.data.data;
+  },
+
+  async approveMember(memberId: string) {
+    const response = await api.patch(`/members/${memberId}/approve`);
+    return response.data.data;
+  },
+
+  async rejectMember(memberId: string) {
+    const response = await api.patch(`/members/${memberId}/reject`);
     return response.data.data;
   },
 
@@ -108,6 +123,14 @@ export const groupService = {
 
   async bulkUpdateMembers(groupId: string, memberIds: string[], data: any) {
     const response = await api.patch(`/groups/${groupId}/members/bulk`, { memberIds, data });
+    return response.data.data;
+  },
+
+  async getGroupMembers(groupId: string, status?: string) {
+    const url = status
+      ? `/groups/${groupId}/members?status=${encodeURIComponent(status)}`
+      : `/groups/${groupId}/members`;
+    const response = await api.get(url);
     return response.data.data;
   }
 };

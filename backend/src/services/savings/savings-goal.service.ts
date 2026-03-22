@@ -24,6 +24,15 @@ export class SavingsGoalService {
       throw new Error('Target date cannot be in the past');
     }
 
+    let currencyCode = data.currencyCode;
+    if (!currencyCode && data.groupId) {
+      const group = await prisma.group.findUnique({
+        where: { id: data.groupId },
+        select: { currencyCode: true },
+      });
+      currencyCode = group?.currencyCode;
+    }
+
     // Create goal
     const goal = await prisma.savingsGoal.create({
       data: {
@@ -34,7 +43,7 @@ export class SavingsGoalService {
         targetDate: data.targetDate ? new Date(data.targetDate) : null,
         category: data.category,
         isPublic: data.isPublic || false,
-        currencyCode: data.currencyCode || 'KES',
+        currencyCode: currencyCode || 'KES',
         status: 'ACTIVE',
         currentAmount: 0,
         groupId: data.groupId || null,

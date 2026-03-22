@@ -1,32 +1,54 @@
 import axios from 'axios';
+import { useAuthStore } from '@/store/auth.store';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
+const XSRF_COOKIE_NAME = 'XSRF-TOKEN';
+const XSRF_HEADER_NAME = 'X-XSRF-TOKEN';
+
 const api = axios.create({
     baseURL: API_URL,
+    withCredentials: true,
+    xsrfCookieName: XSRF_COOKIE_NAME,
+    xsrfHeaderName: XSRF_HEADER_NAME,
+});
+
+const refreshClient = axios.create({
+    baseURL: API_URL,
+    withCredentials: true,
+    xsrfCookieName: XSRF_COOKIE_NAME,
+    xsrfHeaderName: XSRF_HEADER_NAME,
 });
 
 // Add auth token to requests
 api.interceptors.request.use((config) => {
-    const token = localStorage.getItem('accessToken');
+    const token = useAuthStore.getState().accessToken;
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
 });
-// Add response interceptor to handle 401 Unauthorized globally
+
 api.interceptors.response.use(
     (response) => response,
-    (error) => {
-        if (error.response?.status === 401) {
-            console.warn('Unauthorized access, logging out user.');
-            localStorage.removeItem('accessToken');
-            localStorage.removeItem('user');
-            // If we are not already on the login page, redirect
-            if (window.location.pathname !== '/login') {
-                window.location.href = '/login';
+    async (error) => {
+        const originalRequest = error.config;
+        if (error.response?.status === 401 && !originalRequest._retry) {
+            originalRequest._retry = true;
+            try {
+                const refreshResponse = await refreshClient.post('/auth/refresh');
+                const newAccessToken = refreshResponse.data.data.accessToken;
+                useAuthStore.getState().setAccessToken(newAccessToken);
+                originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+                return api(originalRequest);
+            } catch {
+                useAuthStore.getState().clear();
+                if (window.location.pathname !== '/login') {
+                    window.location.href = '/login';
+                }
             }
         }
+
         return Promise.reject(error);
     }
 );

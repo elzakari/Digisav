@@ -1,72 +1,76 @@
+name: digisav
+version: "3.9"
 services:
-  postgres:
+  db:
     image: postgres:15-alpine
-    container_name: savings_group_postgres
+    container_name: digisav_db
     environment:
-      POSTGRES_DB: savings_group_dev
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    ports:
-      - "5433:5432"
+      POSTGRES_USER: ${POSTGRES_USER:-digisav}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-digisavpassword}
+      POSTGRES_DB: ${POSTGRES_DB:-digisav}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - digisav_db_data:/var/lib/postgresql/data
+    restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-digisav}"]
+      interval: 5s
       timeout: 5s
       retries: 5
 
   redis:
     image: redis:7-alpine
-    container_name: savings_group_redis
-    ports:
-      - "6379:6379"
+    container_name: digisav_redis
+    restart: unless-stopped
     volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - digisav_redis_data:/data
+    command: redis-server --appendonly yes
 
   backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile.dev
-    container_name: savings_group_backend
-    ports:
-      - "3000:3000"
-    environment:
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/savings_group_dev?schema=public
-      REDIS_URL: redis://redis:6379
-      NODE_ENV: development
-      JWT_SECRET: dev-secret-change-in-production
-    volumes:
-      - ./backend:/app
-      - /app/node_modules
+    container_name: digisav_backend
+    restart: unless-stopped
     depends_on:
-      postgres:
+      db:
         condition: service_healthy
       redis:
-        condition: service_healthy
-    command: npm run dev
+        condition: service_started
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-digisav}:${POSTGRES_PASSWORD:-digisavpassword}@db:5432/${POSTGRES_DB:-digisav}?schema=public
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET:-supersecretkey-change-in-production}
+      - PORT=3000
+    ports:
+      - "3000:3000"
 
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile.dev
-    container_name: savings_group_frontend
-    ports:
-      - "5173:5173"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    environment:
-      - VITE_API_URL=http://localhost:3000/api
+    container_name: digisav_frontend
+    restart: unless-stopped
     depends_on:
       - backend
-    command: npm run dev
+    ports:
+      - "${FRONTEND_PORT:-5173}:80"
 
 volumes:
-  postgres_data:
-  redis_data:
+  digisav_db_data:
+  digisav_redis_data:
+
+x-casaos:
+  architectures:
+    - amd64
+    - arm64
+    - arm
+  main: frontend
+  description:
+    en_us: "DigiSav is a premium group savings and micro-investment platform. Manage your collective savings, distribute payouts flexibly, and track compliance using dynamic dashboards."
+  tagline: "Modern Group Savings & Investments"
+  icon: "https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/piggy-bank.svg"
+  developer: "Elzakari"
+  author: "Elzakari"
+  category: Finance
+  port_map: "5173"
+  index: /
+  title:
+    en_us: DigiSav

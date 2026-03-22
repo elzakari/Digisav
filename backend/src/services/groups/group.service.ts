@@ -142,6 +142,49 @@ export class GroupService {
     return updated;
   }
 
+  private calculateCycleNumber(startDate: Date, targetDate: Date, frequency: PaymentFrequency): number {
+    const start = new Date(startDate);
+    const target = new Date(targetDate);
+
+    if (target < start) return 1;
+
+    switch (frequency) {
+      case 'WEEKLY':
+        return Math.floor((target.getTime() - start.getTime()) / (7 * 24 * 60 * 60 * 1000)) + 1;
+      case 'BIWEEKLY':
+        return Math.floor((target.getTime() - start.getTime()) / (14 * 24 * 60 * 60 * 1000)) + 1;
+      case 'MONTHLY':
+        return (target.getFullYear() - start.getFullYear()) * 12 + (target.getMonth() - start.getMonth()) + 1;
+      case 'DAILY':
+        return Math.floor((target.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+      default:
+        return (target.getFullYear() - start.getFullYear()) * 12 + (target.getMonth() - start.getMonth()) + 1;
+    }
+  }
+
+  private calculateDueDate(startDate: Date, cycleNumber: number, frequency: PaymentFrequency): Date {
+    const dueDate = new Date(startDate);
+
+    switch (frequency) {
+      case 'WEEKLY':
+        dueDate.setDate(dueDate.getDate() + (cycleNumber - 1) * 7);
+        break;
+      case 'BIWEEKLY':
+        dueDate.setDate(dueDate.getDate() + (cycleNumber - 1) * 14);
+        break;
+      case 'MONTHLY':
+        dueDate.setMonth(dueDate.getMonth() + (cycleNumber - 1));
+        break;
+      case 'DAILY':
+        dueDate.setDate(dueDate.getDate() + (cycleNumber - 1));
+        break;
+      default:
+        dueDate.setMonth(dueDate.getMonth() + (cycleNumber - 1));
+    }
+
+    return dueDate;
+  }
+
   async getGroupTransactions(groupId: string, userId: string, userRole: string) {
     const group = await prisma.group.findUnique({
       where: { id: groupId },
@@ -167,6 +210,147 @@ export class GroupService {
       },
       orderBy: { timestamp: 'desc' },
     });
+  }
+
+  async getGroupDashboard(groupId: string, userId: string, userRole: string) {
+    const group = await prisma.group.findUnique({
+      where: { id: groupId },
+      include: {
+        members: {
+          where: { status: 'ACTIVE' },
+          include: { user: { select: { fullName: true } } },
+        },
+      },
+    });
+
+    if (!group) throw new NotFoundError('Group');
+
+    const isAdmin = group.adminUserId === userId || userRole === 'ADMIN';
+    if (!isAdmin) {
+      throw new ForbiddenError('Only group admin or system admin can view this dashboard');
+    }
+
+    const today = new Date();
+    const startDate = group.startDate ? new Date(group.startDate) : today;
+    const currentCycle = this.calculateCycleNumber(startDate, today, group.paymentFrequency);
+    const currentCycleDueDate = this.calculateDueDate(startDate, currentCycle, group.paymentFrequency);
+
+    const activeMembers = group.members;
+
+    const totalCollectedAgg = await prisma.contribution.aggregate({
+      where: { groupId, status: 'COMPLETED' },
+      _sum: { amount: true },
+    });
+    const totalCollected = Number(totalCollectedAgg._sum.amount || 0);
+    const totalExpected = activeMembers.length * Number(group.contributionAmount) * currentCycle;
+
+    const contributions = await prisma.contribution.findMany({
+      where: {
+        groupId,
+        cycleNumber: currentCycle,
+        memberId: { in: activeMembers.map((m) => m.id) },
+      },
+      include: { member: { include: { user: { select: { fullName: true } } } } },
+    });
+
+    const byMemberId = new Map<string, (typeof contributions)[number]>();
+    for (const c of contributions) {
+      byMemberId.set(c.memberId, c);
+    }
+
+    const items = activeMembers.map((m) => {
+      const c = byMemberId.get(m.id);
+      if (!c) {
+        return {
+          memberId: m.id,
+          memberName: m.user?.fullName || 'Unknown',
+          status: 'DUE' as const,
+          dueDate: currentCycleDueDate,
+          paymentDate: null as Date | null,
+          amount: Number(group.contributionAmount),
+          currencyCode: group.currencyCode,
+        };
+      }
+
+      return {
+        memberId: m.id,
+        memberName: c.member?.user?.fullName || 'Unknown',
+        status: c.status === 'COMPLETED' ? ('PAID' as const) : (c.status as any),
+        dueDate: c.dueDate,
+        paymentDate: c.paymentDate,
+        amount: Number(c.amount),
+        currencyCode: c.currencyCode,
+      };
+    });
+
+    const counts = {
+      DUE: 0,
+      PAID: 0,
+      OVERDUE: 0,
+      DEFAULTED: 0,
+      PENDING: 0,
+    };
+
+    const totals = {
+      dueExpected: 0,
+      paid: 0,
+      pastDue: 0,
+    };
+
+    for (const it of items) {
+      const st = it.status as keyof typeof counts;
+      if (st in counts) counts[st] += 1;
+      if (it.status === 'DUE') totals.dueExpected += Number(group.contributionAmount);
+      if (it.status === 'PAID') totals.paid += it.amount;
+      if (it.status === 'OVERDUE' || it.status === 'DEFAULTED') totals.pastDue += it.amount;
+    }
+
+    const recentActivity = await prisma.transaction.findMany({
+      where: { groupId },
+      include: {
+        member: { include: { user: { select: { fullName: true } } } },
+        recorder: { select: { fullName: true } },
+      },
+      orderBy: { timestamp: 'desc' },
+      take: 8,
+    });
+
+    return {
+      group: {
+        id: group.id,
+        groupName: group.groupName,
+        status: group.status,
+        currencyCode: group.currencyCode,
+        contributionAmount: Number(group.contributionAmount),
+        paymentFrequency: group.paymentFrequency,
+        gracePeriodDays: group.gracePeriodDays,
+        startDate: group.startDate,
+        maxMembers: group.maxMembers,
+        adminUserId: group.adminUserId,
+        activeMembersCount: activeMembers.length,
+      },
+      stats: {
+        totalExpected,
+        totalCollected,
+        outstanding: Math.max(0, totalExpected - totalCollected),
+        complianceRate: totalExpected > 0 ? (totalCollected / totalExpected) * 100 : 0,
+        currentCycle,
+        currencyCode: group.currencyCode,
+      },
+      cycle: {
+        cycleNumber: currentCycle,
+        dueDate: currentCycleDueDate,
+        counts,
+        totals: {
+          dueExpected: totals.dueExpected,
+          paid: totals.paid,
+          pastDue: totals.pastDue,
+          currencyCode: group.currencyCode,
+        },
+        items,
+      },
+      recentActivity,
+    };
   }
 
   async deleteGroup(groupId: string, userId: string, userRole: string) {
@@ -269,19 +453,10 @@ export class GroupService {
   async getAdminAggregateStats(userId: string) {
     const adminGroups = await prisma.group.findMany({
       where: { adminUserId: userId, status: { in: ['ACTIVE', 'CLOSED'] } },
-      include: {
-        _count: {
-          select: { members: true }
-        },
-        contributions: {
-          where: { status: { in: [ContributionStatus.COMPLETED] } },
-          select: { amount: true }
-        }
-      }
+      select: { id: true, currencyCode: true },
     });
 
     const totalGroups = adminGroups.length;
-    let totalMembers = 0;
 
     // Use a Set to count unique active members across all groups
     const uniqueMemberIds = new Set<string>();
@@ -294,14 +469,40 @@ export class GroupService {
     });
 
     allMembers.forEach(m => uniqueMemberIds.add(m.userId));
-    totalMembers = uniqueMemberIds.size;
+    const totalMembers = uniqueMemberIds.size;
 
-    const totalFundsCollected = adminGroups.reduce((acc, group) => {
-      const groupTotal = (group as any).contributions.reduce((sum: number, c: any) => sum + Number(c.amount), 0);
-      return acc + groupTotal;
-    }, 0);
+    const groupIds = adminGroups.map((g) => g.id);
+    const totalsByCurrency = groupIds.length
+      ? await prisma.contribution.groupBy({
+          by: ['currencyCode'],
+          where: {
+            groupId: { in: groupIds },
+            status: ContributionStatus.COMPLETED,
+          },
+          _sum: { amount: true },
+        })
+      : [];
 
-    return { totalGroups, totalMembers, totalFundsCollected };
+    const normalizedTotalsByCurrency = totalsByCurrency
+      .map((t) => ({
+        currencyCode: t.currencyCode,
+        total: Number(t._sum.amount || 0),
+      }))
+      .sort((a, b) => b.total - a.total);
+
+    const totalFundsCollected = normalizedTotalsByCurrency.reduce((acc, t) => acc + t.total, 0);
+
+    const uniqueCurrencies = new Set(adminGroups.map((g) => g.currencyCode).filter(Boolean));
+    const currencyCode = uniqueCurrencies.size === 1 ? Array.from(uniqueCurrencies)[0] : null;
+
+    return {
+      totalGroups,
+      totalMembers,
+      totalFundsCollected,
+      currencyCode,
+      totalsByCurrency: normalizedTotalsByCurrency,
+      multiCurrency: normalizedTotalsByCurrency.length > 1,
+    };
   }
 
   async getMemberAggregateStats(userId: string) {
@@ -371,9 +572,16 @@ export class GroupService {
     });
   }
 
-  async sendGroupNotification(groupId: string, adminId: string, data: { title: string, message: string }) {
+  async sendGroupNotification(groupId: string, adminId: string, data: { title?: string; message?: string; body?: string }) {
+    const title = (data.title || '').trim();
+    const message = (data.message ?? data.body ?? '').trim();
+
+    if (!title || !message) {
+      throw new ValidationError('title and message are required');
+    }
+
     const members = await prisma.member.findMany({
-      where: { groupId, status: 'ACTIVE' },
+      where: { groupId, status: { in: ['ACTIVE', 'PENDING'] } },
       select: { userId: true }
     });
 
@@ -385,8 +593,8 @@ export class GroupService {
       userId: m.userId,
       groupId: groupId,
       type: 'GROUP_ANNOUNCEMENT',
-      title: data.title,
-      body: data.message,
+      title,
+      body: message,
     }));
     
     await prisma.notification.createMany({

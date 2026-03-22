@@ -1,8 +1,8 @@
 import { Navigate, Outlet } from 'react-router-dom';
-import { authService } from '@/services/auth.service';
+import { useAuthStore } from '@/store/auth.store';
 
 export const ProtectedRoute = () => {
-  const user = authService.getCurrentUser();
+  const user = useAuthStore((s) => s.user);
   if (!user) {
     return <Navigate to="/login" replace />;
   }

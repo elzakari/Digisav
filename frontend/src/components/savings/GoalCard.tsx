@@ -22,13 +22,13 @@ const GoalCard: React.FC<GoalCardProps> = ({ goal, onClick }) => {
 
     const message = action === 'withdraw' 
       ? t('savings.withdraw_confirm', { 
-          currency: formatCurrency(0).split(' ')[0], 
+          currency: goal.currencyCode, 
           amount: goal.currentAmount.toLocaleString(), 
           percent: feePercent, 
           fee: feeAmount.toLocaleString() 
         })
       : t('savings.reinvest_confirm', { 
-          currency: formatCurrency(0).split(' ')[0], 
+          currency: goal.currencyCode, 
           amount: goal.currentAmount.toLocaleString(), 
           percent: feePercent, 
           fee: feeAmount.toLocaleString(), 
@@ -96,10 +96,10 @@ const GoalCard: React.FC<GoalCardProps> = ({ goal, onClick }) => {
           <div className="flex justify-between items-end mb-2">
             <div>
               <span className="text-2xl font-black text-white">
-                {formatCurrency(goal.currentAmount)}
+                {formatCurrency(goal.currentAmount, 0, goal.currencyCode)}
               </span>
               <span className="text-white/40 text-xs ml-1 font-medium">
-                {t('savings.saved_of')} {formatCurrency(goal.targetAmount)}
+                {t('savings.saved_of')} {formatCurrency(goal.targetAmount, 0, goal.currencyCode)}
               </span>
             </div>
             <div className="text-blue-400 font-bold text-lg">

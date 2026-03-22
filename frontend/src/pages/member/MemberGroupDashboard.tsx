@@ -49,17 +49,17 @@ export function MemberGroupDashboard() {
     const myContributions = contributions?.filter((c: any) => c.member.userId === currentUser?.id) || [];
     const myTotalContributions = myContributions.reduce((sum: number, c: any) => sum + Number(c.amount), 0);
 
-    if (groupLoading || statsLoading || historyLoading) return (
-        <div className="flex items-center justify-center min-h-[60vh]">
-            <div className="animate-pulse text-indigo-400 font-medium text-lg">{t('common.loading')}</div>
-        </div>
-    );
-
     useEffect(() => {
         if (!groupLoading && !group) {
             navigate('/overview');
         }
     }, [group, groupLoading, navigate]);
+
+    if (groupLoading || statsLoading || historyLoading) return (
+        <div className="flex items-center justify-center min-h-[60vh]">
+            <div className="animate-pulse text-indigo-400 font-medium text-lg">{t('common.loading')}</div>
+        </div>
+    );
 
     return (
         <div className="w-full space-y-10 animate-fade-in">

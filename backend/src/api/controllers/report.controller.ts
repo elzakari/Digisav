@@ -13,14 +13,15 @@ export class ReportController {
   async generateReport(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const { groupId } = req.params as any;
-      const { startDate, endDate, type = 'contributions', format = 'pdf' } = req.body;
+      const { startDate, endDate, type = 'contributions', format = 'pdf', memberId } = req.body;
 
       if (format === 'csv') {
         const csv = await this.reportService.generateCSVReport(
           groupId,
           type as any,
           new Date(startDate),
-          new Date(endDate)
+          new Date(endDate),
+          memberId
         );
         res.setHeader('Content-Type', 'text/csv');
         res.setHeader('Content-Disposition', `attachment; filename=${type}-report-${groupId}.csv`);
@@ -29,11 +30,11 @@ export class ReportController {
 
       let buffer: Buffer;
       if (type === 'payouts') {
-        buffer = await this.reportService.generatePayoutReport(groupId, new Date(startDate), new Date(endDate));
+        buffer = await this.reportService.generatePayoutReport(groupId, new Date(startDate), new Date(endDate), memberId);
       } else if (type === 'audit') {
         buffer = await this.reportService.generateAuditSummaryReport(groupId, new Date(startDate), new Date(endDate));
       } else {
-        buffer = await this.reportService.generateContributionReport(groupId, new Date(startDate), new Date(endDate));
+        buffer = await this.reportService.generateContributionReport(groupId, new Date(startDate), new Date(endDate), memberId);
       }
 
       res.setHeader('Content-Type', 'application/pdf');
@@ -47,10 +48,10 @@ export class ReportController {
   async generateShareLink(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const { groupId } = req.params as any;
-      const { startDate, endDate, type = 'contributions', format = 'pdf' } = req.body;
+      const { startDate, endDate, type = 'contributions', format = 'pdf', memberId } = req.body;
 
       const token = jwt.sign(
-        { groupId, startDate, endDate, type, format },
+        { groupId, startDate, endDate, type, format, memberId },
         process.env.JWT_SECRET || 'your-secret-key',
         { expiresIn: '24h' }
       );
@@ -68,14 +69,15 @@ export class ReportController {
       const { token } = req.params;
       const decoded = jwt.verify(token as string, process.env.JWT_SECRET || 'your-secret-key') as any;
 
-      const { groupId, startDate, endDate, type, format } = decoded;
+      const { groupId, startDate, endDate, type, format, memberId } = decoded;
 
       if (format === 'csv') {
         const csv = await this.reportService.generateCSVReport(
           groupId,
           type as any,
           new Date(startDate),
-          new Date(endDate)
+          new Date(endDate),
+          memberId
         );
         res.setHeader('Content-Type', 'text/csv');
         res.setHeader('Content-Disposition', `attachment; filename=${type}-report-${groupId}.csv`);
@@ -84,11 +86,11 @@ export class ReportController {
 
       let buffer: Buffer;
       if (type === 'payouts') {
-        buffer = await this.reportService.generatePayoutReport(groupId, new Date(startDate), new Date(endDate));
+        buffer = await this.reportService.generatePayoutReport(groupId, new Date(startDate), new Date(endDate), memberId);
       } else if (type === 'audit') {
         buffer = await this.reportService.generateAuditSummaryReport(groupId, new Date(startDate), new Date(endDate));
       } else {
-        buffer = await this.reportService.generateContributionReport(groupId, new Date(startDate), new Date(endDate));
+        buffer = await this.reportService.generateContributionReport(groupId, new Date(startDate), new Date(endDate), memberId);
       }
 
       res.setHeader('Content-Type', 'application/pdf');

@@ -2,16 +2,19 @@ import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { notificationService } from '@/services/notification.service';
 import { formatDistanceToNow } from 'date-fns';
+import { toast } from 'react-hot-toast';
 
 export function NotificationBell() {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
     const queryClient = useQueryClient();
 
-    const { data: response } = useQuery({
+    const { data: response, isError, refetch } = useQuery({
         queryKey: ['notifications'],
         queryFn: notificationService.getMyNotifications,
         refetchInterval: 30000, // Poll every 30s
+        refetchIntervalInBackground: true,
+        staleTime: 0,
     });
 
     const notifications = response?.data || [];
@@ -48,9 +51,22 @@ export function NotificationBell() {
             case 'PAYMENT_OVERDUE': return '⚠️';
             case 'MEMBER_JOINED': return '👥';
             case 'GROUP_ACTIVATED': return '🚀';
+            case 'GROUP_ANNOUNCEMENT': return '📣';
             default: return '🔔';
         }
     };
+
+    useEffect(() => {
+        if (isError) {
+            toast.error('Failed to load notifications');
+        }
+    }, [isError]);
+
+    useEffect(() => {
+        if (isOpen) {
+            refetch();
+        }
+    }, [isOpen, refetch]);
 
     return (
         <div className="relative" ref={dropdownRef}>
@@ -72,7 +88,7 @@ export function NotificationBell() {
             </button>
 
             {isOpen && (
-                <div className="absolute right-0 mt-3 w-80 sm:w-96 bg-slate-900 border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden animate-slide-up origin-top-right">
+                <div className="absolute right-0 mt-3 w-80 sm:w-96 bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden animate-slide-up origin-top-right">
                     <div className="p-4 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
                         <h3 className="font-semibold text-white">Notifications</h3>
                         {unreadCount > 0 && (
@@ -86,7 +102,11 @@ export function NotificationBell() {
                     </div>
 
                     <div className="max-h-[400px] overflow-y-auto custom-scrollbar divide-y divide-white/5">
-                        {notifications.length === 0 ? (
+                        {isError ? (
+                            <div className="p-8 text-center text-rose-400">
+                                <p>Could not load notifications.</p>
+                            </div>
+                        ) : notifications.length === 0 ? (
                             <div className="p-8 text-center text-slate-400">
                                 <p>No notifications yet.</p>
                             </div>

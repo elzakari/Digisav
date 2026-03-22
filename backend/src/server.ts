@@ -1,12 +1,16 @@
 import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
+import rateLimit from 'express-rate-limit';
+import swaggerUi from 'swagger-ui-express';
 import { AppError } from '@/utils/errors';
 import { logger } from '@/utils/logger';
 import { MessageService } from '@/services/messaging/message.service';
 import { MessageScheduler } from '@/services/messaging/scheduler.service';
+import { specs } from '@/config/swagger';
 
 // Import routes
 import authRoutes from '@/api/routes/auth.routes';
@@ -29,18 +33,16 @@ import unifiedRoutes from '@/api/routes/unified.routes';
 
 dotenv.config();
 
-import swaggerUi from 'swagger-ui-express';
-import { specs } from '@/config/swagger';
-
 const app: Application = express();
 const PORT = process.env.PORT || 3000;
 
 // Swagger Documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 
-// Initialize Messaging System
-const messageService = new MessageService();
-new MessageScheduler(messageService);
+if (process.env.REDIS_URL) {
+  const messageService = new MessageService();
+  new MessageScheduler(messageService);
+}
 
 // Middleware
 app.use(helmet({
@@ -59,16 +61,26 @@ app.use(helmet({
   },
 }));
 
-app.use(cors());
-
-// Rate limiting
-import rateLimit from 'express-rate-limit';
+app.use(cookieParser());
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  credentials: true,
+}));
 
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 1000, // limit each IP to 1000 requests per windowMs
+  windowMs: 60 * 1000,
+  max: 100,
   message: 'Too many requests from this IP',
 });
+app.use('/api/', limiter);
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  skipSuccessfulRequests: true,
+});
+app.use('/api/v1/auth/login', authLimiter);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('combined', { stream: { write: (msg: string) => logger.info(msg.trim()) } }));

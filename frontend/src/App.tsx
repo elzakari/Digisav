@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { LoginPage } from '@/pages/auth/Login'
 import { RegisterPage } from '@/pages/auth/Register'
@@ -21,8 +22,19 @@ import { InvestmentDashboard } from '@/pages/investments/InvestmentDashboard';
 import { UnifiedDashboard } from '@/pages/dashboard/UnifiedDashboard';
 import { SettingsPage } from '@/pages/settings/SettingsPage';
 import { Toaster } from 'react-hot-toast';
+import { authService } from '@/services/auth.service'
 
 function App() {
+  const [ready, setReady] = useState(false)
+
+  useEffect(() => {
+    authService.initialize().finally(() => setReady(true))
+  }, [])
+
+  if (!ready) {
+    return null
+  }
+
   return (
     <MainLayout>
       <Toaster position="top-right" toastOptions={{ className: 'glass-toast' }} />

@@ -10,7 +10,7 @@ export class RoboAdvisorService {
    * Generate a recommendation based on risk tolerance
    */
   async generateRecommendation(userId: string) {
-    const account = await prisma.investmentAccount.findUnique({
+    const account = await prisma.investmentAccount.findFirst({
       where: { userId },
     });
 

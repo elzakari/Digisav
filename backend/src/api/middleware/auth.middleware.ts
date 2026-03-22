@@ -86,3 +86,51 @@ export const requireGroupAdmin = async (
     next(error);
   }
 };
+
+export const requireGroupMember = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    if (!req.user) {
+      throw new UnauthorizedError('Not authenticated');
+    }
+
+    const groupId = (req.params.groupId || req.params.id) as string;
+    if (!groupId) {
+      throw new BadRequestError('Group ID is required');
+    }
+
+    const group = await prisma.group.findUnique({
+      where: { id: groupId },
+      select: { adminUserId: true },
+    });
+
+    if (!group) {
+      throw new NotFoundError('Group not found');
+    }
+
+    if (group.adminUserId === req.user.id || req.user.role === 'SYS_ADMIN') {
+      return next();
+    }
+
+    const membership = await prisma.member.findUnique({
+      where: {
+        groupId_userId: {
+          groupId,
+          userId: req.user.id,
+        },
+      },
+      select: { id: true },
+    });
+
+    if (!membership) {
+      throw new ForbiddenError('You do not have access to this group');
+    }
+
+    next();
+  } catch (error) {
+    next(error);
+  }
+};

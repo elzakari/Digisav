@@ -19,7 +19,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         if (user?.theme) {
             document.documentElement.setAttribute('data-theme', user.theme);
         }
-        if (user?.language) {
+        const current = (i18nInstance.resolvedLanguage || i18nInstance.language || 'en').split('-')[0];
+        if (user?.language && user.language !== current) {
             i18nInstance.changeLanguage(user.language);
         }
     }, [user?.theme, user?.language, i18nInstance]);

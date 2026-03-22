@@ -19,16 +19,23 @@ export const contributionService = {
     return response.data.data;
   },
 
-  async downloadReport(groupId: string, startDate: string, endDate: string, type: string = 'contributions', format: string = 'pdf') {
+  async downloadReport(
+    groupId: string,
+    startDate: string,
+    endDate: string,
+    type: string = 'contributions',
+    format: string = 'pdf',
+    memberId?: string
+  ) {
     const response = await api.post(
       `/groups/${groupId}/reports`,
-      { startDate, endDate, type, format },
+      { startDate, endDate, type, format, memberId },
       { responseType: 'blob' }
     );
     return response.data;
   },
 
-  async getShareLink(groupId: string, params: { startDate: string; endDate: string; type: string; format: string }) {
+  async getShareLink(groupId: string, params: { startDate: string; endDate: string; type: string; format: string; memberId?: string }) {
     const response = await api.post<{ success: boolean; shareLink: string }>(
       `/groups/${groupId}/reports/share`,
       params
