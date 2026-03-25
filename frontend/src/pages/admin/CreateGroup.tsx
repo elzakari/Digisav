@@ -194,7 +194,6 @@ export function CreateGroupPage() {
                 <input
                   {...register('startDate')}
                   type="date"
-                  min={new Date().toISOString().split('T')[0]}
                   className="w-full glass-input"
                 />
               </div>

@@ -146,7 +146,6 @@ export function CreateGoalPage() {
                 <input
                   {...register('targetDate')}
                   type="date"
-                  min={new Date().toISOString().split('T')[0]}
                   className="w-full glass-input"
                 />
               </div>
