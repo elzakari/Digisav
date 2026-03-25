@@ -104,7 +104,7 @@ export function ConfirmActionModal({
               disabled={isLoading}
               className="flex-1 px-6 py-3.5 rounded-2xl bg-slate-800 text-white text-sm font-bold hover:bg-slate-700 transition-all border border-slate-700/50 disabled:opacity-50"
             >
-              {cancelLabel || t('common.cancel')}
+              {cancelLabel || t('common.cancel', 'Cancel')}
             </button>
             <button
               onClick={onConfirm}
@@ -114,10 +114,10 @@ export function ConfirmActionModal({
               {isLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  {t('common.processing')}
+                  {t('common.processing', 'Processing...')}
                 </>
               ) : (
-                confirmLabel || t('common.confirm')
+                confirmLabel || t('common.confirm', 'Confirm')
               )}
             </button>
           </div>
