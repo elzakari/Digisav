@@ -9,3 +9,7 @@ coverage
 *.tar
 *.tar.gz
 .trae/
+cloudflared/credentials.json
+cloudflared/*.json
+Digisav/
+digisav.bundle

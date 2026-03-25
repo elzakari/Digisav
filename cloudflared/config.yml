@@ -1,0 +1,10 @@
+tunnel: digisav
+credentials-file: /etc/cloudflared/credentials.json
+
+ingress:
+  - hostname: digisav.example.com
+    service: http://frontend:80
+    originRequest:
+      httpHostHeader: digisav.example.com
+  - service: http_status:404
+
