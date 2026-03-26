@@ -288,7 +288,7 @@
     },
     "settings": {
         "title": "Account Settings",
-        "subtitle": "Personalize your DigiSav experience",
+        "subtitle": "Personalize your Germinos experience",
         "appearance": "Appearance",
         "theme": "Theme",
         "language": "Language",
@@ -375,7 +375,7 @@
     },
     "sysadmin": {
         "platform_overview": "Platform Overview",
-        "platform_desc": "High-level analytics and health metrics for the DigiSav SaaS platform.",
+        "platform_desc": "High-level analytics and health metrics for the Germinos SaaS platform.",
         "total_users": "Total Registered Users",
         "total_groups": "Total Savings Groups",
         "total_transactions": "Total Platform Transactions",
@@ -400,7 +400,7 @@
         "cannot_delete_self": "You cannot delete your own account",
         "user_deleted_success": "User deleted successfully",
         "user_deleted_failed": "Failed to delete user",
-        "users_desc": "Manage all registered users and administrators across the DigiSav system.",
+        "users_desc": "Manage all registered users and administrators across the Germinos system.",
         "users_db": "All Users Database",
         "global_roster": "Global Roster",
         "name_email": "Name & Email",

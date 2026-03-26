@@ -155,7 +155,7 @@ export function ReportsModal({ isOpen, onClose, groupId }: ReportsModalProps) {
       const reportName = t(`reports.${reportType}`);
       const memberName = selectedMemberName;
       const text = encodeURIComponent(
-        `Hi, please find the ${memberName ? memberName + " " : ""}${reportName} report here: ${shareLink}\n\nGenerated via DigiSav.`
+        `Hi, please find the ${memberName ? memberName + " " : ""}${reportName} report here: ${shareLink}\n\nGenerated via Germinos.`
       );
 
       setShareLink(shareLink);

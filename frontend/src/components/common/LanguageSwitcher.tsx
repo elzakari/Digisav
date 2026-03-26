@@ -52,7 +52,8 @@ export function LanguageSwitcher() {
         await i18n.changeLanguage(code);
         try {
             await userService.updateProfile({ language: code });
-        } catch {
+        } catch (e) {
+            void e;
         }
     };
 

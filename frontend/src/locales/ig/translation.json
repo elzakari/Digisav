@@ -38,7 +38,7 @@
     },
     "settings": {
         "title": "Ntọala Akaụntụ",
-        "subtitle": "Hazie ahụmahụ DigiSav gị",
+        "subtitle": "Hazie ahụmahụ Germinos gị",
         "appearance": "Ọdịdị",
         "theme": "Agba ihuenyo",
         "language": "Asụsụ",
@@ -192,7 +192,7 @@
     },
     "sysadmin": {
         "platform_overview": "Nchịkọta Platform",
-        "platform_desc": "Nnyocha dị elu na metrik ahụike maka platform DigiSav SaaS.",
+        "platform_desc": "Nnyocha dị elu na metrik ahụike maka platform Germinos SaaS.",
         "total_users": "Ngụkọta Ndị Ọrụ Debanyere Aha",
         "total_groups": "Ngụkọta Otu Nchekwa",
         "total_transactions": "Ngụkọta Azụmahịa Platform",
@@ -201,7 +201,7 @@
         "payouts_volume": "Ogo Nkesa Ego",
         "commissions_volume": "Ogo Komisọọn",
         "platform_users": "Ndị Ọrụ Platform",
-        "users_desc": "Jikwaa ndị ọrụ niile debanyere aha na ndị nchịkwa na sistemu DigiSav niile.",
+        "users_desc": "Jikwaa ndị ọrụ niile debanyere aha na ndị nchịkwa na sistemu Germinos niile.",
         "users_db": "Ebe Nchekwa Ndị Ọrụ Niile",
         "global_roster": "Ndepụta Global",
         "name_email": "Aha na Imeeli",

@@ -284,7 +284,7 @@
     },
     "settings": {
         "title": "Paramètres du Compte",
-        "subtitle": "Personnalisez votre expérience DigiSav",
+        "subtitle": "Personnalisez votre expérience Germinos",
         "appearance": "Apparence",
         "theme": "Thème",
         "language": "Langue",
@@ -371,7 +371,7 @@
     },
     "sysadmin": {
         "platform_overview": "Aperçu de la plateforme",
-        "platform_desc": "Analyses de haut niveau et mesures de santé pour la plateforme DigiSav SaaS.",
+        "platform_desc": "Analyses de haut niveau et mesures de santé pour la plateforme Germinos SaaS.",
         "total_users": "Total des utilisateurs enregistrés",
         "total_groups": "Total des groupes d'épargne",
         "total_transactions": "Total des transactions sur la plateforme",
@@ -396,7 +396,7 @@
         "cannot_delete_self": "Vous ne pouvez pas supprimer votre propre compte",
         "user_deleted_success": "Utilisateur supprimé avec succès",
         "user_deleted_failed": "Échec de la suppression de l'utilisateur",
-        "users_desc": "Gérer tous les utilisateurs et administrateurs enregistrés dans le système DigiSav.",
+        "users_desc": "Gérer tous les utilisateurs et administrateurs enregistrés dans le système Germinos.",
         "users_db": "Base de données de tous les utilisateurs",
         "global_roster": "Liste globale",
         "name_email": "Nom & E-mail",

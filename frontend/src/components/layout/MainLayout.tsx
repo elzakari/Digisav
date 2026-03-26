@@ -124,7 +124,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                             </button>
 
                             <Link to={user.role === 'SYS_ADMIN' ? '/sysadmin/dashboard' : user.role === 'ADMIN' ? '/admin/dashboard' : '/overview'} className="text-xl font-black text-white tracking-tight">
-                                Digi<span className="text-indigo-400">Sav</span>
+                                Germ<span className="text-indigo-400">inos</span>
                             </Link>
 
                             <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
@@ -179,7 +179,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                                 to={user.role === 'SYS_ADMIN' ? '/sysadmin/dashboard' : user.role === 'ADMIN' ? '/admin/dashboard' : '/overview'}
                                 className="text-lg font-black text-white tracking-tight"
                             >
-                                Digi<span className="text-indigo-400">Sav</span>
+                                Germ<span className="text-indigo-400">inos</span>
                             </Link>
                             <button
                                 type="button"

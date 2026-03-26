@@ -78,7 +78,7 @@
     },
     "settings": {
         "title": "Mipangilio ya Akaunti",
-        "subtitle": "Binafsisha uzoefu wako wa DigiSav",
+        "subtitle": "Binafsisha uzoefu wako wa Germinos",
         "appearance": "Muonekano",
         "theme": "Rangi ya Skrini",
         "language": "Lugha",
@@ -197,7 +197,7 @@
     },
     "sysadmin": {
         "platform_overview": "Uchambuzi wa Platform",
-        "platform_desc": "Analytics za juu na metrics za afya kwa platform ya DigiSav SaaS.",
+        "platform_desc": "Analytics za juu na metrics za afya kwa platform ya Germinos SaaS.",
         "total_users": "Jumla ya Watumiaji waliosajiliwa",
         "total_groups": "Jumla ya Vikundi vya Akiba",
         "total_transactions": "Jumla ya Miamala ya Platform",
@@ -206,7 +206,7 @@
         "payouts_volume": "Kiasi cha Malipo",
         "commissions_volume": "Kiasi cha Kamisheni",
         "platform_users": "Watumiaji wa Platform",
-        "users_desc": "Simamia watumiaji na wasimamizi wote waliosajiliwa kwenye mfumo wa DigiSav.",
+        "users_desc": "Simamia watumiaji na wasimamizi wote waliosajiliwa kwenye mfumo wa Germinos.",
         "users_db": "Database ya Watumiaji Wote",
         "global_roster": "Orodha ya Dunia",
         "name_email": "Jina & Barua Pepe",

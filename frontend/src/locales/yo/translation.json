@@ -38,7 +38,7 @@
     },
     "settings": {
         "title": "Eto Akọọlẹ",
-        "subtitle": "Ṣe akanṣe iriri DigiSav rẹ",
+        "subtitle": "Ṣe akanṣe iriri Germinos rẹ",
         "appearance": "Ifarahan",
         "theme": "Àwọ̀ ìbòjú",
         "language": "Èdè",
@@ -191,7 +191,7 @@
     },
     "sysadmin": {
         "platform_overview": "Àpapọ̀ Ìwoye Ìpele",
-        "platform_desc": "Àwọn ìṣirò àti ìwọ̀n ìlera fún ètò DigiSav SaaS.",
+        "platform_desc": "Àwọn ìṣirò àti ìwọ̀n ìlera fún ètò Germinos SaaS.",
         "total_users": "Àpapọ̀ Àwọn Olùlò Tí Ó Forúkọsílẹ̀",
         "total_groups": "Àpapọ̀ Àwọn Ẹgbẹ́ Ìfowópamọ́",
         "total_transactions": "Àpapọ̀ Àwọn Ìṣòwò Ètò",
@@ -200,7 +200,7 @@
         "payouts_volume": "Ìwọ̀n Àwọn Ìsanwó",
         "commissions_volume": "Ìwọ̀n Kọmísàn",
         "platform_users": "Àwọn Olùlò Ètò",
-        "users_desc": "Ṣàkóso gbogbo àwọn olùlò àti alákòóso nínú ètò DigiSav.",
+        "users_desc": "Ṣàkóso gbogbo àwọn olùlò àti alákòóso nínú ètò Germinos.",
         "users_db": "Àkójọpọ̀ Gbogbo Olùlò",
         "global_roster": "Àkójọpọ̀ Àgbáyé",
         "name_email": "Orúkọ & Imeeli",

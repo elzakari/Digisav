@@ -35,7 +35,7 @@
     },
     "settings": {
         "title": "Saitunan Asusun",
-        "subtitle": "Keɓance uzoefu na DigiSav",
+        "subtitle": "Keɓance uzoefu na Germinos",
         "appearance": "Bayyanar",
         "theme": "Rasa Skrini",
         "language": "Harshe",
@@ -172,7 +172,7 @@
     },
     "sysadmin": {
         "platform_overview": "Bayanin Tsarin",
-        "platform_desc": "Kididdigar matakin sama da ma'aunin lafiya don tsarin DigiSav SaaS.",
+        "platform_desc": "Kididdigar matakin sama da ma'aunin lafiya don tsarin Germinos SaaS.",
         "total_users": "Jimillar Masu Amfani da Suka Yi Rijista",
         "total_groups": "Jimillar Rukunonin Adana Kudi",
         "total_transactions": "Jimillar Ma'amalar Tsarin",
@@ -181,7 +181,7 @@
         "payouts_volume": "Yawan Raba Kudi",
         "commissions_volume": "Yawan Komishan",
         "platform_users": "Masu Amfani da Tsarin",
-        "users_desc": "Sarrafa duk masu amfani da suka yi rijista da masu gudanarwa a duk tsarin DigiSav.",
+        "users_desc": "Sarrafa duk masu amfani da suka yi rijista da masu gudanarwa a duk tsarin Germinos.",
         "users_db": "Taskar Duk Masu Amfani",
         "global_roster": "Jerin Duniya",
         "name_email": "Suna da Imel",
