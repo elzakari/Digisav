@@ -71,7 +71,7 @@ export function MemberGroupDashboard() {
                         <span>/</span>
                         <span className="text-slate-400">{group?.groupName}</span>
                     </div>
-                    <h1 className="text-4xl font-bold tracking-tight">{t('dashboard.members_payout')}</h1>
+                    <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">{t('dashboard.members_payout')}</h1>
                 </div>
             </header>
 
@@ -183,34 +183,64 @@ export function MemberGroupDashboard() {
 
             {/* Contribution History Table */}
             <div className="glass-card overflow-hidden">
-                <div className="px-8 py-6 border-b border-white/5 flex justify-between items-center bg-white/5">
+                <div className="px-4 sm:px-6 md:px-8 py-5 md:py-6 border-b border-white/5 flex justify-between items-center bg-white/5">
                     <h2 className="text-xl font-bold text-white">{t('dashboard.my_contributions')}</h2>
                     <span className="text-xs text-indigo-400 font-bold uppercase tracking-widest">{t('common.active')}</span>
                 </div>
 
-                <div className="overflow-x-auto no-scrollbar">
+                <div className="md:hidden divide-y divide-white/5">
+                    {myContributions?.map((c: any) => (
+                        <div key={c.id} className="p-4 sm:p-5">
+                            <div className="flex items-start justify-between gap-4">
+                                <div>
+                                    <div className="text-xs text-slate-500">
+                                        {new Date(c.paymentDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                                    </div>
+                                    <div className="mt-1 text-[10px] text-slate-500 uppercase tracking-widest">
+                                        {c.paymentMethod}
+                                    </div>
+                                </div>
+
+                                <div className="text-right">
+                                    <div className="text-sm font-bold text-white tabular-nums">
+                                        {formatCurrency(c.amount, 0, c.currencyCode)}
+                                    </div>
+                                    <div className="mt-2">
+                                        <span className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg border ${c.status === 'PAID' || c.status === 'COMPLETED' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
+                                            'bg-slate-500/20 text-slate-400 border-slate-500/30'
+                                            }`}>
+                                            {c.status === 'PAID' ? t('common.active') : c.status === 'OVERDUE' ? t('common.overdue') : c.status}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                <div className="hidden md:block overflow-x-auto no-scrollbar">
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-white/[0.02]">
-                                <th className="px-8 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">{t('common.date')}</th>
-                                <th className="px-8 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">{t('common.amount')}</th>
-                                <th className="px-8 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">{t('common.method')}</th>
-                                <th className="px-8 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">{t('common.status')}</th>
+                                <th className="px-6 md:px-8 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">{t('common.date')}</th>
+                                <th className="px-6 md:px-8 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">{t('common.amount')}</th>
+                                <th className="px-6 md:px-8 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">{t('common.method')}</th>
+                                <th className="px-6 md:px-8 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">{t('common.status')}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
                             {myContributions?.map((c: any) => (
                                 <tr key={c.id} className="hover:bg-white/[0.02] transition-colors group">
-                                    <td className="px-8 py-5 text-sm text-slate-300">
+                                    <td className="px-6 md:px-8 py-5 text-sm text-slate-300">
                                         {new Date(c.paymentDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                                     </td>
-                                    <td className="px-8 py-5 text-sm font-semibold text-slate-200">
+                                    <td className="px-6 md:px-8 py-5 text-sm font-semibold text-slate-200">
                                         {formatCurrency(c.amount, 0, c.currencyCode)}
                                     </td>
-                                    <td className="px-8 py-5 text-sm text-slate-400 uppercase tracking-tighter">
+                                    <td className="px-6 md:px-8 py-5 text-sm text-slate-400 uppercase tracking-tighter">
                                         {c.paymentMethod}
                                     </td>
-                                    <td className="px-8 py-5">
+                                    <td className="px-6 md:px-8 py-5">
                                         <span className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg ${c.status === 'PAID' || c.status === 'COMPLETED' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
                                             'bg-slate-500/20 text-slate-400 border border-slate-500/30'
                                             }`}>

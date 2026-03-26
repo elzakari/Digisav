@@ -81,7 +81,7 @@ export function InvestmentDashboard() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 py-8 animate-fade-in-up">
+    <div className="max-w-7xl mx-auto space-y-8 py-6 md:py-8 animate-fade-in-up">
       {/* Header & Main Stats */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 glass-card p-8 flex flex-col justify-center space-y-6">
@@ -137,20 +137,77 @@ export function InvestmentDashboard() {
 
       {/* Holdings Section */}
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <h2 className="text-xl font-bold text-white uppercase tracking-widest ml-1">{t('investments.your_holdings')}</h2>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
             <button className="p-3 bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 text-slate-300 transition-all">
               <ArrowUpRight size={20} />
             </button>
-            <button className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all">
+            <button className="flex items-center justify-center gap-2 px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all w-full sm:w-auto">
               <Plus size={20} /> {t('investments.invest_more')}
             </button>
           </div>
         </div>
 
         <div className="glass-card overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className="md:hidden divide-y divide-white/5">
+            {portfolio?.holdings.length === 0 ? (
+              <div className="p-8 text-center text-slate-500 italic">
+                {t('investments.no_holdings')}
+              </div>
+            ) : (
+              portfolio?.holdings.map((holding) => (
+                <div key={holding.id} className="p-4 sm:p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center font-black text-blue-400 border border-white/10 flex-shrink-0">
+                        {holding.symbol.substring(0, 2)}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-bold text-white truncate">{holding.name}</div>
+                        <div className="text-xs text-slate-500 truncate">
+                          {holding.symbol} • {holding.quantity.toFixed(4)} {t('investments.shares')}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <div className="text-sm font-bold text-white tabular-nums">
+                        {formatCurrency(holding.currentValue)}
+                      </div>
+                      <div className={`mt-2 text-xs font-bold flex items-center justify-end gap-1 ${holding.gainLoss >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
+                        {holding.gainLoss >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+                        <span>{holding.gainLossPercentage.toFixed(2)}%</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-2 gap-3">
+                    <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/5">
+                      <div className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t('investments.allocation')}</div>
+                      <div className="mt-2 w-full h-2 bg-white/5 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-blue-500"
+                          style={{ width: `${(holding.currentValue / portfolio.investedValue) * 100}%` }}
+                        />
+                      </div>
+                      <div className="mt-2 text-[10px] text-slate-500 font-bold uppercase tracking-widest">
+                        {((holding.currentValue / portfolio.investedValue) * 100).toFixed(1)}%
+                      </div>
+                    </div>
+                    <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/5">
+                      <div className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t('investments.gain_loss')}</div>
+                      <div className={`mt-2 text-sm font-bold tabular-nums ${holding.gainLoss >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
+                        {holding.gainLoss >= 0 ? '+' : ''}{formatCurrency(holding.gainLoss)}
+                      </div>
+                      <div className="mt-1 text-xs text-slate-500">{t('investments.avg_basis')}: {formatCurrency(holding.avgCostBasis)}</div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-white/5 text-left">

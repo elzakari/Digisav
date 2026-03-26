@@ -1,7 +1,12 @@
-import { SavingsGoalStatus } from '@prisma/client';
+import { SavingsGoalStatus, TransactionType } from '@prisma/client';
 import prisma from '@/lib/prisma';
+import { LedgerService } from '@/services/ledger/ledger.service';
+import { NotificationService } from '@/services/notifications/notification.service';
 
 export class SavingsGoalService {
+  private ledgerService = new LedgerService();
+  private notificationService = new NotificationService();
+
   /**
    * Create a new personal savings goal
    */
@@ -71,6 +76,76 @@ export class SavingsGoalService {
 
     if (goal.status !== 'ACTIVE') {
       throw new Error('Goal is not active');
+    }
+
+    const group = goal.groupId
+      ? await prisma.group.findUnique({ where: { id: goal.groupId } })
+      : null;
+
+    const isMicroSavingsGroup =
+      goal.category === ('MICRO_SAVINGS' as any) &&
+      !!goal.groupId &&
+      group?.groupType === 'MICRO_SAVINGS' &&
+      !!goal.targetDate;
+
+    if (isMicroSavingsGroup) {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const target = new Date(goal.targetDate!.getFullYear(), goal.targetDate!.getMonth(), goal.targetDate!.getDate());
+
+      if (today >= target) {
+        const deposit = await prisma.savingsDeposit.create({
+          data: {
+            savingsGoalId: goalId,
+            userId,
+            amount,
+            currencyCode: goal.currencyCode,
+            source: 'commission',
+            depositDate: new Date(),
+            notes: 'Admin commission (final day)',
+          },
+        });
+
+        const member = await prisma.member.findUnique({
+          where: {
+            groupId_userId: {
+              groupId: goal.groupId!,
+              userId,
+            },
+          },
+          select: { id: true },
+        });
+
+        await this.ledgerService.createTransaction({
+          groupId: goal.groupId!,
+          memberId: member?.id,
+          transactionType: TransactionType.FEE,
+          amount,
+          currencyCode: goal.currencyCode,
+          referenceId: deposit.id,
+          recordedBy: userId,
+          metadata: {
+            type: 'MICRO_SAVINGS_COMMISSION',
+            goalId,
+            feeRecipientUserId: group?.adminUserId,
+          },
+        });
+
+        try {
+          if (group?.adminUserId) {
+            await this.notificationService.createNotification({
+              userId: group.adminUserId,
+              groupId: goal.groupId!,
+              type: 'GROUP_ANNOUNCEMENT',
+              title: 'Micro-Savings Commission',
+              body: `A commission payment was recorded for ${goal.name}.`,
+            });
+          }
+        } catch {
+        }
+
+        return deposit;
+      }
     }
 
     // Create deposit record

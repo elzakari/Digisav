@@ -79,6 +79,7 @@ model Group {
   groupName           String              @db.VarChar(100)
   groupPrefix         String              @unique @db.VarChar(10)
   adminUserId         String              @db.Uuid
+  groupType           GroupType           @default(TONTINE)
   contributionAmount  Decimal             @db.Decimal(12, 2)
   currencyCode        String              @db.VarChar(3)
   paymentFrequency    PaymentFrequency
@@ -107,6 +108,11 @@ model Group {
   @@index([adminUserId])
   @@index([status])
   @@map("groups")
+}
+
+enum GroupType {
+  TONTINE
+  MICRO_SAVINGS
 }
 
 model Member {

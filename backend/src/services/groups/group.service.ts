@@ -1,4 +1,4 @@
-import { PaymentFrequency, PayoutOrderType, ContributionStatus } from '@prisma/client';
+import { PaymentFrequency, PayoutOrderType, ContributionStatus, GroupType } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { NotFoundError, ForbiddenError, ValidationError } from '@/utils/errors';
 import { generateGroupPrefix, generateAccountNumber } from '@/utils/generators';
@@ -6,12 +6,14 @@ import { logger } from '@/utils/logger';
 
 export interface CreateGroupData {
   groupName: string;
-  contributionAmount: number;
+  groupType?: GroupType;
+  includeAdminAsMember?: boolean;
+  contributionAmount?: number;
   currencyCode: string;
-  paymentFrequency: PaymentFrequency;
+  paymentFrequency?: PaymentFrequency;
   customFrequencyDays?: number;
   maxMembers: number;
-  payoutOrderType: PayoutOrderType;
+  payoutOrderType?: PayoutOrderType;
   startDate?: Date;
   gracePeriodDays?: number;
 }
@@ -21,13 +23,30 @@ export class GroupService {
     // Generate unique group prefix
     const groupPrefix = await this.generateUniquePrefix(data.groupName);
 
+    const groupType = data.groupType || 'TONTINE';
+    const isMicroSavings = groupType === 'MICRO_SAVINGS';
+    const includeAdminAsMember = data.includeAdminAsMember === true;
+
+    const now = new Date();
+
+    const normalizedData: any = {
+      ...data,
+      includeAdminAsMember: undefined,
+      groupType,
+      contributionAmount: isMicroSavings ? (data.contributionAmount ?? 0) : data.contributionAmount,
+      paymentFrequency: isMicroSavings ? (data.paymentFrequency ?? 'DAILY') : data.paymentFrequency,
+      payoutOrderType: isMicroSavings ? (data.payoutOrderType ?? 'MANUAL') : data.payoutOrderType,
+      gracePeriodDays: isMicroSavings ? 0 : (data.gracePeriodDays ?? 0),
+      startDate: isMicroSavings ? (data.startDate ?? now) : data.startDate,
+    };
+
     return prisma.$transaction(async (tx) => {
       const group = await tx.group.create({
         data: {
-          ...data,
+          ...normalizedData,
           groupPrefix,
           adminUserId,
-          status: 'DRAFT',
+          status: isMicroSavings ? 'ACTIVE' : 'DRAFT',
         },
         include: {
           admin: {
@@ -40,17 +59,20 @@ export class GroupService {
         },
       });
 
-      // Add admin as the first member
-      await tx.member.create({
-        data: {
-          groupId: group.id,
-          userId: adminUserId,
-          status: 'ACTIVE',
-          joinDate: new Date(),
-          nationalId: 'ADMIN-' + group.id.substring(0, 8),
-          accountNumber: generateAccountNumber(group.groupPrefix),
-        },
-      });
+      if (includeAdminAsMember) {
+        await tx.member.create({
+          data: {
+            groupId: group.id,
+            userId: adminUserId,
+            status: 'ACTIVE',
+            joinDate: new Date(),
+            nationalId: 'ADMIN-' + group.id.substring(0, 8),
+            accountNumber: generateAccountNumber(group.groupPrefix),
+            isSavingsGroupMember: !isMicroSavings,
+            isMicroSavingsMember: isMicroSavings,
+          },
+        });
+      }
 
       return group;
     });
@@ -399,8 +421,16 @@ export class GroupService {
       throw new NotFoundError('Group');
     }
 
-    if (group.adminUserId !== userId && userRole !== 'ADMIN') {
+    if (group.adminUserId !== userId && userRole !== 'ADMIN' && userRole !== 'SYS_ADMIN') {
       throw new ForbiddenError('Only group admin or system admin can activate group');
+    }
+
+    if (group.groupType === 'MICRO_SAVINGS') {
+      const updated = await prisma.group.update({
+        where: { id: groupId },
+        data: { status: 'ACTIVE' },
+      });
+      return updated;
     }
 
     // Validation before activation

@@ -76,6 +76,8 @@ export class MemberService {
         ...data,
         accountNumber,
         status: 'PENDING',
+        isSavingsGroupMember: group.groupType !== 'MICRO_SAVINGS',
+        isMicroSavingsMember: group.groupType === 'MICRO_SAVINGS',
       },
       include: {
         user: {
@@ -92,6 +94,7 @@ export class MemberService {
             groupName: true,
             contributionAmount: true,
             currencyCode: true,
+            groupType: true,
           },
         },
       },
@@ -135,18 +138,47 @@ export class MemberService {
       throw new ValidationError('Member is not in pending status');
     }
 
-    const updated = await prisma.member.update({
-      where: { id: memberId },
-      data: { status: 'ACTIVE' },
-      include: {
-        user: {
-          select: {
-            fullName: true,
-            email: true,
-            phoneNumber: true,
+    const updated = await prisma.$transaction(async (tx) => {
+      const nextMember = await tx.member.update({
+        where: { id: memberId },
+        data: { status: 'ACTIVE' },
+        include: {
+          user: {
+            select: {
+              fullName: true,
+              email: true,
+              phoneNumber: true,
+            },
           },
         },
-      },
+      });
+
+      if (member.group.groupType === 'MICRO_SAVINGS') {
+        const existingGoal = await tx.savingsGoal.findFirst({
+          where: {
+            userId: member.userId,
+            groupId: member.groupId,
+            category: (SavingsGoalCategory as any).MICRO_SAVINGS,
+          },
+        });
+
+        if (!existingGoal) {
+          await tx.savingsGoal.create({
+            data: {
+              userId: member.userId,
+              groupId: member.groupId,
+              name: `Micro-Savings: ${member.group.groupName}`,
+              category: (SavingsGoalCategory as any).MICRO_SAVINGS,
+              targetAmount: 1000000,
+              currencyCode: member.group.currencyCode,
+              status: 'ACTIVE',
+              currentAmount: 0,
+            },
+          });
+        }
+      }
+
+      return nextMember;
     });
 
     // Notify member

@@ -58,6 +58,47 @@ export class ContributionService {
       }
 
       const result = await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+        if (member.group.groupType === 'MICRO_SAVINGS' && microSavingsGoal.targetDate) {
+          const pd = new Date(data.paymentDate);
+          const paymentDay = new Date(pd.getFullYear(), pd.getMonth(), pd.getDate());
+          const td = new Date(microSavingsGoal.targetDate);
+          const targetDay = new Date(td.getFullYear(), td.getMonth(), td.getDate());
+
+          if (paymentDay >= targetDay) {
+            const deposit = await tx.savingsDeposit.create({
+              data: {
+                savingsGoalId: microSavingsGoal.id,
+                userId: member.userId,
+                amount: data.amount,
+                currencyCode: data.currencyCode,
+                source: 'ADMIN_RECORDED_COMMISSION',
+                referenceNumber: data.referenceNumber,
+                notes: data.notes || 'Admin commission (final day)',
+                depositDate: data.paymentDate,
+              },
+            });
+
+            const ledgerService = new LedgerService(tx as any);
+            await ledgerService.createTransaction({
+              groupId: data.groupId,
+              memberId: data.memberId,
+              transactionType: TransactionType.FEE,
+              amount: data.amount,
+              currencyCode: data.currencyCode,
+              referenceId: deposit.id,
+              recordedBy: data.recordedBy,
+              metadata: {
+                depositId: deposit.id,
+                goalId: microSavingsGoal.id,
+                type: 'MICRO_SAVINGS_COMMISSION',
+                paymentMethod: data.paymentMethod,
+              },
+            });
+
+            return deposit;
+          }
+        }
+
         // 1. Create Savings Deposit
         const deposit = await tx.savingsDeposit.create({
           data: {
@@ -201,6 +242,75 @@ export class ContributionService {
           paymentMethod: data.paymentMethod,
         },
       });
+
+      if (member.group.groupType === 'TONTINE' && Number(member.group.groupFeePercentage || 0) > 0) {
+        const [activeMembersCount, completedCount] = await Promise.all([
+          tx.member.count({ where: { groupId: data.groupId, status: 'ACTIVE' } }),
+          tx.contribution.count({
+            where: {
+              groupId: data.groupId,
+              cycleNumber,
+              status: 'COMPLETED',
+            },
+          }),
+        ]);
+
+        if (activeMembersCount > 0 && completedCount >= activeMembersCount) {
+          const existingFee = await tx.transaction.findFirst({
+            where: {
+              groupId: data.groupId,
+              transactionType: TransactionType.FEE,
+              AND: [
+                {
+                  metadata: {
+                    path: ['type'],
+                    equals: 'TONTINE_COMMISSION',
+                  },
+                },
+                {
+                  metadata: {
+                    path: ['cycleNumber'],
+                    equals: cycleNumber,
+                  },
+                },
+              ],
+            } as any,
+          });
+
+          if (!existingFee) {
+            const total = activeMembersCount * Number(member.group.contributionAmount);
+            const commissionPct = Number(member.group.groupFeePercentage);
+            const commission = Number(((total * commissionPct) / 100).toFixed(2));
+
+            const adminMember = await tx.member.findUnique({
+              where: {
+                groupId_userId: {
+                  groupId: data.groupId,
+                  userId: member.group.adminUserId,
+                },
+              },
+              select: { id: true },
+            });
+
+            if (commission > 0) {
+              await ledgerService.createTransaction({
+                groupId: data.groupId,
+                memberId: adminMember?.id,
+                transactionType: TransactionType.FEE,
+                amount: commission,
+                currencyCode: data.currencyCode,
+                recordedBy: member.group.adminUserId,
+                metadata: {
+                  type: 'TONTINE_COMMISSION',
+                  cycleNumber,
+                  feePercentage: commissionPct,
+                  baseAmount: total,
+                },
+              });
+            }
+          }
+        }
+      }
 
       return contribution;
     });

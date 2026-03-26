@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -7,18 +8,29 @@ import { groupService } from '@/services/group.service';
 import { useTranslation } from 'react-i18next';
 
 const createGroupSchema = z.object({
+  groupType: z.enum(['TONTINE', 'MICRO_SAVINGS']).default('TONTINE'),
+  includeAdminAsMember: z.boolean().default(false),
   groupName: z.string().min(3, 'Name must be at least 3 characters'),
-  contributionAmount: z.number().positive('Amount must be positive'),
+  contributionAmount: z.number().min(0, 'Amount must be 0 or greater'),
   currencyCode: z.string().length(3, 'Invalid currency code'),
   paymentFrequency: z.enum(['DAILY', 'WEEKLY', 'BIWEEKLY', 'MONTHLY', 'CUSTOM']),
   customFrequencyDays: z.number().optional(),
-  maxMembers: z.number().int().min(3).max(100),
+  maxMembers: z.number().int().min(1).max(100),
   payoutOrderType: z.enum(['MANUAL', 'RANDOM', 'ROTATION']),
   startDate: z.string().optional(),
   gracePeriodDays: z.number().int().min(0).max(30),
+}).superRefine((val, ctx) => {
+  if (val.groupType === 'TONTINE') {
+    if (val.contributionAmount <= 0) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['contributionAmount'], message: 'Amount must be positive' });
+    }
+    if (val.maxMembers < 3) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['maxMembers'], message: 'At least 3 members required' });
+    }
+  }
 });
 
-type CreateGroupForm = z.infer<typeof createGroupSchema>;
+type CreateGroupForm = z.input<typeof createGroupSchema>;
 
 export function CreateGroupPage() {
   const navigate = useNavigate();
@@ -28,10 +40,13 @@ export function CreateGroupPage() {
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<CreateGroupForm>({
     resolver: zodResolver(createGroupSchema),
     defaultValues: {
+      groupType: 'TONTINE',
+      includeAdminAsMember: false,
       groupName: '',
       contributionAmount: 0,
       currencyCode: 'KES',
@@ -54,6 +69,21 @@ export function CreateGroupPage() {
   };
 
   const paymentFrequency = watch('paymentFrequency');
+  const groupType = watch('groupType');
+
+  const isMicroSavings = groupType === 'MICRO_SAVINGS';
+
+  const maxMembers = watch('maxMembers');
+
+  useEffect(() => {
+    if (isMicroSavings) {
+      setValue('paymentFrequency', 'DAILY');
+      setValue('payoutOrderType', 'MANUAL');
+      setValue('contributionAmount', 0);
+      setValue('gracePeriodDays', 0);
+      if (maxMembers < 1) setValue('maxMembers', 10);
+    }
+  }, [isMicroSavings, setValue, maxMembers]);
 
   return (
     <div className="w-full max-w-2xl animate-fade-in-up">
@@ -70,6 +100,30 @@ export function CreateGroupPage() {
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
           <div className="space-y-6">
+            <div className="space-y-1.5">
+              <label className="block text-sm font-medium text-slate-300 ml-1">
+                Group Type
+              </label>
+              <select
+                {...register('groupType')}
+                className="w-full glass-input appearance-none"
+              >
+                <option value="TONTINE">Group Savings (Tontine)</option>
+                <option value="MICRO_SAVINGS">Micro-Savings (Personal Targets)</option>
+              </select>
+            </div>
+
+            <label className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-white/[0.02] border border-white/5">
+              <div className="space-y-1">
+                <div className="text-sm font-semibold text-slate-200">Include me as a member</div>
+                <div className="text-xs text-slate-500">Enable only if you also want to contribute as a participant.</div>
+              </div>
+              <input
+                type="checkbox"
+                {...register('includeAdminAsMember')}
+                className="h-5 w-5 rounded border-white/20 bg-transparent"
+              />
+            </label>
             {/* Group Name */}
             <div className="space-y-1.5">
               <label className="block text-sm font-medium text-slate-300 ml-1">
@@ -98,6 +152,7 @@ export function CreateGroupPage() {
                   step="0.01"
                   className="w-full glass-input"
                   placeholder="1000"
+                  disabled={isMicroSavings}
                 />
                 {errors.contributionAmount && (
                   <p className="text-rose-400 text-xs ml-1">
@@ -134,6 +189,7 @@ export function CreateGroupPage() {
                 <select
                   {...register('paymentFrequency')}
                   className="w-full glass-input appearance-none"
+                  disabled={isMicroSavings}
                 >
                   <option value="DAILY">{t('frequency.daily')}</option>
                   <option value="WEEKLY">{t('frequency.weekly')}</option>
@@ -149,6 +205,7 @@ export function CreateGroupPage() {
                       min="1"
                       className="w-full glass-input"
                       placeholder={t('admin.interval_days')}
+                      disabled={isMicroSavings}
                     />
                   </div>
                 )}
@@ -180,6 +237,7 @@ export function CreateGroupPage() {
                 <select
                   {...register('payoutOrderType')}
                   className="w-full glass-input appearance-none"
+                  disabled={isMicroSavings}
                 >
                   <option value="MANUAL">{t('admin.payout_manual')}</option>
                   <option value="RANDOM">{t('admin.payout_random')}</option>
@@ -211,6 +269,7 @@ export function CreateGroupPage() {
                   min="0"
                   max="30"
                   className="w-24 glass-input text-center"
+                  disabled={isMicroSavings}
                 />
                 <span className="text-sm text-slate-500 font-medium">
                   {t('admin.grace_period_desc')}

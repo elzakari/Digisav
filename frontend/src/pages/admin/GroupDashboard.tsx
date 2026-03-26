@@ -175,7 +175,7 @@ export function GroupDashboard() {
             <span>/</span>
             <span className="text-slate-400">{t('common.dashboard')}</span>
           </div>
-          <h1 className="text-4xl font-bold tracking-tight">{t('dashboard.title')}</h1>
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">{t('dashboard.title')}</h1>
         </div>
         <div className="flex flex-col items-start gap-3">
           <div className="flex flex-wrap items-center gap-3">
@@ -300,29 +300,60 @@ export function GroupDashboard() {
 
       {activeTab === 'transactions' && (
         <div className="glass-card overflow-hidden animate-fade-in">
-          <div className="px-8 py-6 border-b border-white/5 flex justify-between items-center bg-white/5">
+          <div className="px-4 sm:px-6 md:px-8 py-5 md:py-6 border-b border-white/5 flex justify-between items-center bg-white/5">
             <h2 className="text-xl font-bold text-white">{t('dashboard.recent_transactions')}</h2>
             <span className="text-xs text-slate-400 font-medium uppercase tracking-widest">{t('dashboard.live_updates')}</span>
           </div>
 
-          <div className="overflow-x-auto no-scrollbar">
+          <div className="md:hidden divide-y divide-white/5">
+            {transactions?.map((c: any) => (
+              <div key={c.id} className="p-4 sm:p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-white truncate">
+                      {c.member?.user?.fullName || 'Unknown'}
+                    </div>
+                    <div className="mt-1 text-xs text-slate-500">
+                      {new Date(c.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </div>
+                    <div className="mt-2 text-[10px] text-slate-500 uppercase tracking-widest">
+                      {c.metadata?.paymentMethod || 'BANK'}
+                    </div>
+                  </div>
+
+                  <div className="text-right flex-shrink-0">
+                    <div className={`text-sm font-bold tabular-nums ${c.transactionType === 'PAYOUT' ? 'text-rose-400' : 'text-emerald-400'}`}>
+                      {c.transactionType === 'PAYOUT' ? '-' : '+'}{formatCurrency(c.amount, 0, c.currencyCode)}
+                    </div>
+                    <div className="mt-2">
+                      <span className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg border ${c.transactionType === 'PAYOUT' ? 'bg-rose-500/20 text-rose-400 border-rose-500/30' : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'}`}>
+                        {c.transactionType === 'PAYOUT' ? t('common.payout') : t('common.completed')}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="hidden md:block overflow-x-auto no-scrollbar">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-white/[0.02]">
-                  <th className="px-8 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">{t('common.date')}</th>
-                  <th className="px-8 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">{t('common.member')}</th>
-                  <th className="px-8 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">{t('common.amount')}</th>
-                  <th className="px-8 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">{t('common.method')}</th>
-                  <th className="px-8 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">{t('common.status')}</th>
+                  <th className="px-6 md:px-8 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">{t('common.date')}</th>
+                  <th className="px-6 md:px-8 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">{t('common.member')}</th>
+                  <th className="px-6 md:px-8 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">{t('common.amount')}</th>
+                  <th className="px-6 md:px-8 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">{t('common.method')}</th>
+                  <th className="px-6 md:px-8 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">{t('common.status')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
                 {transactions?.map((c: any) => (
                   <tr key={c.id} className="hover:bg-white/[0.02] transition-colors group">
-                    <td className="px-8 py-5 text-sm text-slate-300">
+                    <td className="px-6 md:px-8 py-5 text-sm text-slate-300">
                       {new Date(c.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                     </td>
-                    <td className="px-8 py-5">
+                    <td className="px-6 md:px-8 py-5">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold text-xs border border-indigo-500/30">
                           {c.member?.user?.fullName.charAt(0) || '?'}
@@ -332,15 +363,15 @@ export function GroupDashboard() {
                         </span>
                       </div>
                     </td>
-                    <td className="px-8 py-5 text-sm font-semibold text-slate-200">
+                    <td className="px-6 md:px-8 py-5 text-sm font-semibold text-slate-200">
                       <span className={c.transactionType === 'PAYOUT' ? 'text-rose-400' : 'text-emerald-400'}>
                         {c.transactionType === 'PAYOUT' ? '-' : '+'}{formatCurrency(c.amount, 0, c.currencyCode)}
                       </span>
                     </td>
-                    <td className="px-8 py-5 text-sm text-slate-400 uppercase tracking-tighter">
+                    <td className="px-6 md:px-8 py-5 text-sm text-slate-400 uppercase tracking-tighter">
                       {c.metadata?.paymentMethod || 'BANK'}
                     </td>
-                    <td className="px-8 py-5">
+                    <td className="px-6 md:px-8 py-5">
                       <span className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg ${c.transactionType === 'PAYOUT' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'}`}>
                         {c.transactionType === 'PAYOUT' ? t('common.payout') : t('common.completed')}
                       </span>
@@ -361,16 +392,168 @@ export function GroupDashboard() {
 
       {activeTab === 'members' && (
         <div className="glass-card overflow-hidden animate-fade-in">
-          <div className="px-8 py-6 border-b border-white/5 flex justify-between items-center bg-white/5">
+          <div className="px-4 sm:px-6 md:px-8 py-5 md:py-6 border-b border-white/5 flex justify-between items-center bg-white/5">
             <h2 className="text-xl font-bold text-white">{t('dashboard.roster_schedule')}</h2>
             <span className="text-xs text-indigo-400 font-bold uppercase tracking-widest">{group?.members?.length || 0} {t('dashboard.total_members')}</span>
           </div>
 
-          <div className="overflow-x-auto no-scrollbar">
+          <div className="md:hidden">
+            <div className="p-4 sm:p-5 border-b border-white/5 flex items-center justify-between gap-4">
+              <label className="flex items-center gap-3 text-sm text-slate-300">
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 rounded border-white/20 bg-transparent text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                  checked={selectedMemberIds.length === (group?.members?.length || 0) && (group?.members?.length || 0) > 0}
+                  onChange={() => toggleSelectAll(group?.members || [])}
+                />
+                <span className="font-semibold">{t('common.select_all') || 'Select all'}</span>
+              </label>
+              <div className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">
+                {selectedMemberIds.length > 0 ? `${selectedMemberIds.length} selected` : ''}
+              </div>
+            </div>
+
+            <div className="divide-y divide-white/5">
+              {[...(group?.members || [])]
+                .sort((a: any, b: any) => (a.payoutPosition || 999) - (b.payoutPosition || 999))
+                .map((m: any, index: number) => (
+                  <div key={m.id} className={`p-4 sm:p-5 ${selectedMemberIds.includes(m.id) ? 'bg-indigo-500/5' : ''}`}>
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start gap-3 min-w-0 flex-1">
+                        <input
+                          type="checkbox"
+                          className="mt-1 w-4 h-4 rounded border-white/20 bg-transparent text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                          checked={selectedMemberIds.includes(m.id)}
+                          onChange={() => toggleSelectMember(m.id)}
+                        />
+
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="w-6 h-6 rounded-md bg-indigo-500/20 flex items-center justify-center text-indigo-300 font-black text-xs border border-indigo-500/30 flex-shrink-0">
+                              {m.payoutPosition || index + 1}
+                            </span>
+                            <div className="text-sm font-semibold text-white truncate">
+                              {m.user?.fullName}
+                            </div>
+                            {m.isCurrentInAll ? (
+                              <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse flex-shrink-0" title="Active in all categories" />
+                            ) : null}
+                          </div>
+
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            {m.isSavingsGroupMember ? (
+                              <span className="text-[8px] font-bold uppercase text-emerald-500/80 px-1 bg-emerald-500/5 rounded">Group</span>
+                            ) : null}
+                            {m.isMicroSavingsMember ? (
+                              <span className="text-[8px] font-bold uppercase text-blue-500/80 px-1 bg-blue-500/5 rounded">Micro</span>
+                            ) : null}
+                            {m.isMicroInvestmentMember ? (
+                              <span className="text-[8px] font-bold uppercase text-amber-500/80 px-1 bg-amber-500/5 rounded">Invest</span>
+                            ) : null}
+                          </div>
+
+                          <div className="mt-3 grid grid-cols-2 gap-3">
+                            <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/5">
+                              <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">{t('common.acc_number')}</div>
+                              <div className="mt-1 text-xs font-mono text-slate-300 truncate">{m.accountNumber || t('common.pending')}</div>
+                            </div>
+                            <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/5">
+                              <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">{t('dashboard.personal_balance') || 'Personal Balance'}</div>
+                              <div className="mt-1 text-xs font-semibold text-rose-300 tabular-nums">
+                                {formatCurrency(m.user?.savingsGoals?.reduce((acc: number, g: any) => acc + Number(g.currentAmount), 0) || 0, 0, currencyCode)}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="mt-3 flex items-center gap-2 flex-wrap">
+                            <span className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg border ${m.status === 'ACTIVE' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
+                              m.status === 'SUSPENDED' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
+                                'bg-slate-500/20 text-slate-400 border-slate-500/30'
+                              }`}>
+                              {m.status === 'ACTIVE' ? t('common.active') : m.status === 'SUSPENDED' ? t('common.suspended') : t('common.pending')}
+                            </span>
+
+                            {(m.userId === group?.adminUserId || m.user?.role === 'ADMIN') ? (
+                              <span className={`text-[10px] inline-block px-2 py-0.5 rounded-full border ${m.user?.role === 'ADMIN' ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'}`}>
+                                {m.user?.role === 'ADMIN' ? t('role.SYS_ADMIN') : t('role.GROUP_ADMIN')}
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex-shrink-0">
+                        {m.userId !== group?.adminUserId && m.user?.role !== 'ADMIN' ? (
+                          <div className="relative">
+                            <button
+                              onClick={() => setMemberMenuOpenId(memberMenuOpenId === m.id ? null : m.id)}
+                              className="p-2 rounded-xl hover:bg-white/10 text-slate-300 hover:text-white transition-colors text-xl leading-none"
+                              aria-label={t('common.actions') || 'Actions'}
+                            >
+                              ⋮
+                            </button>
+                            {memberMenuOpenId === m.id && (
+                              <div className="absolute right-0 top-10 z-30 w-48 bg-slate-900/95 border border-white/10 rounded-xl overflow-hidden shadow-2xl">
+                                {m.status === 'PENDING' ? (
+                                  <>
+                                    <button
+                                      onClick={() => handleMemberAction('approve', m)}
+                                      className="w-full px-4 py-3 text-sm text-left text-emerald-400 hover:bg-emerald-500/10 transition-colors border-b border-white/5 flex items-center gap-2"
+                                    >
+                                      <span>✅</span> {t('common.activate') || 'Approve'}
+                                    </button>
+                                    <button
+                                      onClick={() => handleMemberAction('reject', m)}
+                                      className="w-full px-4 py-3 text-sm text-left text-rose-400 hover:bg-rose-500/10 transition-colors border-b border-white/5 flex items-center gap-2"
+                                    >
+                                      <span>✖️</span> {t('common.reject') || 'Reject'}
+                                    </button>
+                                  </>
+                                ) : m.status === 'SUSPENDED' || m.status === 'INACTIVE' ? (
+                                  <button
+                                    onClick={() => handleMemberAction('activate', m)}
+                                    className="w-full px-4 py-3 text-sm text-left text-emerald-400 hover:bg-emerald-500/10 transition-colors border-b border-white/5 flex items-center gap-2"
+                                  >
+                                    <span>✅</span> {t('common.activate') || 'Activate'}
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => handleMemberAction('suspend', m)}
+                                    className="w-full px-4 py-3 text-sm text-left text-amber-400 hover:bg-amber-500/10 transition-colors border-b border-white/5 flex items-center gap-2"
+                                  >
+                                    <span>⏸</span> {t('common.suspend') || 'Suspend'}
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => handleMemberAction('edit', m)}
+                                  className="w-full px-4 py-3 text-sm text-left text-indigo-300 hover:bg-white/10 transition-colors border-b border-white/5 flex items-center gap-2"
+                                >
+                                  <span>✏️</span> {t('common.edit')}
+                                </button>
+                                <button
+                                  onClick={() => handleMemberAction('remove', m)}
+                                  className="w-full px-4 py-3 text-sm text-left text-rose-400 hover:bg-rose-500/10 transition-colors flex items-center gap-2"
+                                >
+                                  <span>🗑</span> {t('common.delete')}
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-slate-600 text-xs">—</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </div>
+
+          <div className="hidden md:block overflow-x-auto no-scrollbar">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-white/[0.02]">
-                  <th className="px-8 py-4 w-10">
+                  <th className="px-6 md:px-8 py-4 w-10">
                     <input 
                       type="checkbox" 
                       className="w-4 h-4 rounded border-white/20 bg-transparent text-indigo-600 focus:ring-indigo-500 cursor-pointer"
@@ -378,19 +561,19 @@ export function GroupDashboard() {
                       onChange={() => toggleSelectAll(group?.members || [])}
                     />
                   </th>
-                  <th className="px-8 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">{t('common.payout_order')}</th>
-                  <th className="px-8 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">{t('common.member_name')}</th>
-                  <th className="px-8 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">{t('common.join_date')}</th>
-                  <th className="px-8 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">{t('common.acc_number')}</th>
-                  <th className="px-8 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">{t('dashboard.personal_balance') || 'Personal Balance'}</th>
-                  <th className="px-8 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">{t('common.status')}</th>
-                  <th className="px-8 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">{t('common.actions')}</th>
+                  <th className="px-6 md:px-8 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">{t('common.payout_order')}</th>
+                  <th className="px-6 md:px-8 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">{t('common.member_name')}</th>
+                  <th className="px-6 md:px-8 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">{t('common.join_date')}</th>
+                  <th className="px-6 md:px-8 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">{t('common.acc_number')}</th>
+                  <th className="px-6 md:px-8 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">{t('dashboard.personal_balance') || 'Personal Balance'}</th>
+                  <th className="px-6 md:px-8 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">{t('common.status')}</th>
+                  <th className="px-6 md:px-8 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">{t('common.actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
                 {[...(group?.members || [])].sort((a: any, b: any) => (a.payoutPosition || 999) - (b.payoutPosition || 999)).map((m: any, index: number) => (
                   <tr key={m.id} className={`hover:bg-white/[0.02] transition-colors group ${selectedMemberIds.includes(m.id) ? 'bg-indigo-500/5' : ''}`}>
-                    <td className="px-8 py-5">
+                    <td className="px-6 md:px-8 py-5">
                       <input 
                         type="checkbox" 
                         className="w-4 h-4 rounded border-white/20 bg-transparent text-indigo-600 focus:ring-indigo-500 cursor-pointer"
@@ -398,14 +581,14 @@ export function GroupDashboard() {
                         onChange={() => toggleSelectMember(m.id)}
                       />
                     </td>
-                    <td className="px-8 py-5">
+                    <td className="px-6 md:px-8 py-5">
                       <div className="flex items-center gap-2">
                         <span className="w-6 h-6 rounded-md bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-black text-xs border border-indigo-500/30">
                           {m.payoutPosition || index + 1}
                         </span>
                       </div>
                     </td>
-                    <td className="px-8 py-5 font-medium text-slate-200">
+                    <td className="px-6 md:px-8 py-5 font-medium text-slate-200">
                       <div className="flex flex-col">
                         <div className="flex items-center gap-2">
                           {m.user?.fullName}
@@ -425,16 +608,16 @@ export function GroupDashboard() {
                         </span>
                       )}
                     </td>
-                    <td className="px-8 py-5 text-sm text-slate-400">
+                    <td className="px-6 md:px-8 py-5 text-sm text-slate-400">
                       {new Date(m.joinDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                     </td>
-                    <td className="px-8 py-5 text-sm text-slate-400 font-mono">
+                    <td className="px-6 md:px-8 py-5 text-sm text-slate-400 font-mono">
                       {m.accountNumber || t('common.pending')}
                     </td>
-                    <td className="px-8 py-5 text-sm font-semibold text-rose-400">
+                    <td className="px-6 md:px-8 py-5 text-sm font-semibold text-rose-400">
                       {formatCurrency(m.user?.savingsGoals?.reduce((acc: number, g: any) => acc + Number(g.currentAmount), 0) || 0, 0, currencyCode)}
                     </td>
-                    <td className="px-8 py-5">
+                    <td className="px-6 md:px-8 py-5">
                       <span className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg ${m.status === 'ACTIVE' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
                         m.status === 'SUSPENDED' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
                           'bg-slate-500/20 text-slate-400 border border-slate-500/30'
@@ -442,7 +625,7 @@ export function GroupDashboard() {
                         {m.status === 'ACTIVE' ? t('common.active') : m.status === 'SUSPENDED' ? t('common.suspended') : t('common.pending')}
                       </span>
                     </td>
-                    <td className="px-8 py-5">
+                    <td className="px-6 md:px-8 py-5">
                       {m.userId !== group?.adminUserId && m.user?.role !== 'ADMIN' ? (
                         <div className="relative">
                           <button

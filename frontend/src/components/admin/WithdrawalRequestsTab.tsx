@@ -71,40 +71,105 @@ export function WithdrawalRequestsTab({ groupId }: WithdrawalRequestsTabProps) {
   return (
     <div className="space-y-6">
       <div className="glass-card overflow-hidden animate-fade-in">
-        <div className="px-8 py-6 border-b border-white/5 flex justify-between items-center bg-white/5">
+        <div className="px-4 sm:px-6 md:px-8 py-5 md:py-6 border-b border-white/5 flex justify-between items-center bg-white/5">
           <h2 className="text-xl font-bold text-white">{t('admin.pending_requests') || 'Pending Requests'}</h2>
           <span className="text-xs text-amber-400 font-bold uppercase tracking-widest">
             {t('admin.pending_count', { count: pendingRequests.length }) || `${pendingRequests.length} Pending`}
           </span>
         </div>
-        
-        <div className="overflow-x-auto no-scrollbar">
+
+        <div className="md:hidden divide-y divide-white/5">
+          {pendingRequests.map((req: any) => (
+            <div key={req.id} className="p-4 sm:p-5">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold text-white truncate">{req.member?.user?.fullName || 'Unknown'}</div>
+                  <div className="mt-1 text-xs text-slate-500">{req.savingsGoal?.name || t('common.micro_savings') || 'Micro-savings'}</div>
+                  <div className="mt-2 text-[10px] text-slate-500 uppercase tracking-widest">
+                    {new Date(req.requestedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </div>
+                </div>
+
+                <div className="text-right flex-shrink-0">
+                  <div className="text-sm font-bold text-amber-300 tabular-nums">
+                    {formatCurrency(req.amount, 0, req.currencyCode || 'KES')}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <button
+                  onClick={() =>
+                    setConfirmModal({
+                      isOpen: true,
+                      title: t('admin.approve_request_title') || 'Approve Withdrawal',
+                      description:
+                        t('admin.approve_request_desc', { name: req.member?.user?.fullName, amount: formatCurrency(req.amount, 0, req.currencyCode || 'KES') }) ||
+                        `Are you sure you want to approve the withdrawal request of ${formatCurrency(req.amount, 0, req.currencyCode || 'KES')} for ${req.member?.user?.fullName}?`,
+                      variant: 'success',
+                      onConfirm: () => {
+                        approveMutation.mutate(req.id);
+                        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+                      },
+                    })
+                  }
+                  disabled={approveMutation.isPending || denyMutation.isPending}
+                  className="py-3 rounded-2xl bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/15 border border-emerald-500/20 text-xs font-bold uppercase tracking-widest transition-colors disabled:opacity-50"
+                >
+                  {t('common.approve')}
+                </button>
+                <button
+                  onClick={() =>
+                    setConfirmModal({
+                      isOpen: true,
+                      title: t('admin.deny_request_title') || 'Deny Withdrawal',
+                      description:
+                        t('admin.deny_request_desc', { name: req.member?.user?.fullName }) ||
+                        `Are you sure you want to deny this withdrawal request?`,
+                      variant: 'danger',
+                      onConfirm: () => {
+                        denyMutation.mutate(req.id);
+                        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+                      },
+                    })
+                  }
+                  disabled={approveMutation.isPending || denyMutation.isPending}
+                  className="py-3 rounded-2xl bg-rose-500/10 text-rose-300 hover:bg-rose-500/15 border border-rose-500/20 text-xs font-bold uppercase tracking-widest transition-colors disabled:opacity-50"
+                >
+                  {t('common.deny')}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="hidden md:block overflow-x-auto no-scrollbar">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-white/[0.02]">
-                <th className="px-8 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">{t('common.date')}</th>
-                <th className="px-8 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">{t('common.member')}</th>
-                <th className="px-8 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">{t('common.goal')}</th>
-                <th className="px-8 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">{t('common.amount')}</th>
-                <th className="px-8 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest text-right">{t('common.actions')}</th>
+                <th className="px-6 md:px-8 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">{t('common.date')}</th>
+                <th className="px-6 md:px-8 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">{t('common.member')}</th>
+                <th className="px-6 md:px-8 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">{t('common.goal')}</th>
+                <th className="px-6 md:px-8 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">{t('common.amount')}</th>
+                <th className="px-6 md:px-8 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest text-right">{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
               {pendingRequests.map((req: any) => (
                 <tr key={req.id} className="hover:bg-white/[0.02] transition-colors">
-                  <td className="px-8 py-5 text-sm text-slate-300">
+                  <td className="px-6 md:px-8 py-5 text-sm text-slate-300">
                     {new Date(req.requestedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                   </td>
-                  <td className="px-8 py-5">
+                  <td className="px-6 md:px-8 py-5">
                     <span className="text-sm font-medium text-white">{req.member?.user?.fullName || 'Unknown'}</span>
                   </td>
-                  <td className="px-8 py-5 text-sm text-slate-300">
+                  <td className="px-6 md:px-8 py-5 text-sm text-slate-300">
                     {req.savingsGoal?.name || t('common.micro_savings') || 'Micro-savings'}
                   </td>
-                  <td className="px-8 py-5 text-sm font-semibold text-amber-400">
+                  <td className="px-6 md:px-8 py-5 text-sm font-semibold text-amber-400">
                     {formatCurrency(req.amount, 0, req.currencyCode || 'KES')}
                   </td>
-                  <td className="px-8 py-5 text-right">
+                  <td className="px-6 md:px-8 py-5 text-right">
                     <div className="flex items-center justify-end gap-2">
                        <button 
                          onClick={() => setConfirmModal({
@@ -154,21 +219,36 @@ export function WithdrawalRequestsTab({ groupId }: WithdrawalRequestsTabProps) {
 
        {processedRequests.length > 0 && (
         <div className="glass-card overflow-hidden animate-fade-in opacity-70 hover:opacity-100 transition-opacity">
-          <div className="px-8 py-4 border-b border-white/5 flex justify-between items-center bg-white/5">
+          <div className="px-4 sm:px-6 md:px-8 py-4 border-b border-white/5 flex justify-between items-center bg-white/5">
             <h2 className="text-sm font-bold text-white uppercase tracking-widest">{t('common.history')}</h2>
           </div>
-          <div className="overflow-x-auto no-scrollbar">
+          <div className="md:hidden divide-y divide-white/5">
+            {processedRequests.slice(0, 10).map((req: any) => (
+              <div key={req.id} className="p-4 sm:p-5 flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <div className="text-xs text-slate-500">{new Date(req.processedAt || req.requestedAt).toLocaleDateString()}</div>
+                  <div className="mt-1 text-sm text-slate-200 truncate">
+                    {req.member?.user?.fullName} · {formatCurrency(req.amount, 0, req.currencyCode || 'KES')}
+                  </div>
+                </div>
+                <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border ${req.status === 'APPROVED' ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' : 'bg-rose-500/10 text-rose-300 border-rose-500/20'}`}>
+                  {req.status}
+                </span>
+              </div>
+            ))}
+          </div>
+          <div className="hidden md:block overflow-x-auto no-scrollbar">
             <table className="w-full text-left border-collapse">
               <tbody className="divide-y divide-white/5">
                 {processedRequests.slice(0, 10).map((req: any) => (
                   <tr key={req.id} className="hover:bg-white/[0.02]">
-                    <td className="px-8 py-3 text-xs text-slate-400">
+                    <td className="px-6 md:px-8 py-3 text-xs text-slate-400">
                       {new Date(req.processedAt || req.requestedAt).toLocaleDateString()}
                     </td>
-                    <td className="px-8 py-3 text-sm text-slate-300">
+                    <td className="px-6 md:px-8 py-3 text-sm text-slate-300">
                       {req.member?.user?.fullName} - {formatCurrency(req.amount, 0, req.currencyCode || 'KES')}
                     </td>
-                    <td className="px-8 py-3 text-right">
+                    <td className="px-6 md:px-8 py-3 text-right">
                       <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${req.status === 'APPROVED' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
                         {req.status}
                       </span>
