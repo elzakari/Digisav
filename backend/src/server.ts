@@ -141,11 +141,13 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
     });
   }
 
+  const isProduction = process.env.NODE_ENV === 'production';
+
   res.status(500).json({
     success: false,
     error: {
       code: 'INTERNAL_ERROR',
-      message: 'An unexpected error occurred',
+      message: isProduction ? 'An unexpected error occurred' : err.message,
     },
   });
 });

@@ -98,6 +98,10 @@ export class AuthService {
   }
 
   private generateAccessToken(user: any): string {
+    if (!process.env.JWT_SECRET) {
+      throw new ValidationError('JWT_SECRET is not configured');
+    }
+
     const payload: TokenPayload = {
       sub: user.id,
       email: user.email,
@@ -110,6 +114,10 @@ export class AuthService {
   }
 
   private async generateRefreshToken(userId: string): Promise<string> {
+    if (!process.env.JWT_SECRET) {
+      throw new ValidationError('JWT_SECRET is not configured');
+    }
+
     const token = (jwt.sign as any)({ sub: userId }, process.env.JWT_SECRET!, {
       expiresIn: process.env.REFRESH_TOKEN_EXPIRY || '30d',
     });
