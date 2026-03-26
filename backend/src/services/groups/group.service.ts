@@ -391,13 +391,18 @@ export class GroupService {
 
     if (group.status === 'DRAFT') {
       // Hard delete for draft groups (no financial history exists)
-      await prisma.$transaction([
-        prisma.message.deleteMany({ where: { groupId } }),
-        prisma.invitation.deleteMany({ where: { groupId } }),
-        prisma.notification.deleteMany({ where: { groupId } }),
-        prisma.member.deleteMany({ where: { groupId } }),
-        prisma.group.delete({ where: { id: groupId } }),
-      ]);
+      await prisma.$transaction(async (tx) => {
+        await tx.withdrawalRequest.deleteMany({ where: { groupId } });
+        await tx.transaction.deleteMany({ where: { groupId } });
+        await tx.contribution.deleteMany({ where: { groupId } });
+        await tx.message.deleteMany({ where: { groupId } });
+        await tx.invitation.deleteMany({ where: { groupId } });
+        await tx.notification.deleteMany({ where: { groupId } });
+        await tx.savingsGoal.updateMany({ where: { groupId }, data: { groupId: null } });
+        await tx.investmentAccount.updateMany({ where: { groupId }, data: { groupId: null } });
+        await tx.member.deleteMany({ where: { groupId } });
+        await tx.group.delete({ where: { id: groupId } });
+      });
       return { deleted: true, archived: false };
     } else {
       // Soft delete (archive) for active/closed groups to preserve financial logs
