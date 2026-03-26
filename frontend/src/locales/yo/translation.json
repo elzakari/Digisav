@@ -31,7 +31,10 @@
         "standard_micro": "Standard + Micro",
         "report_error": "Kò le mú ìroyì jáde",
         "start_date": "Ọjọ́ Ìbẹ̀rẹ̀",
-        "end_date": "Ọjọ́ Ìparí"
+        "end_date": "Ọjọ́ Ìparí",
+        "copy": "Daakọ",
+        "copied": "Ti daakọ",
+        "copy_failed": "Kò le daakọ"
     },
     "settings": {
         "title": "Eto Akọọlẹ",
@@ -153,7 +156,13 @@
         "edit_member_desc": "Ṣe imudojuiwọn àwọn ìsọfúnni mẹ́ḿbà àti ipò ikopa ẹgbẹ́.",
         "group_name_placeholder": "Tẹ orúkọ ẹgbẹ́ sínú...",
         "members_selected": "Awọn ọmọ ẹgbẹ ti a yan",
-        "apply_bulk_actions": "Lo awọn iṣe pupọ"
+        "apply_bulk_actions": "Lo awọn iṣe pupọ",
+        "failed_create_group": "Kò le dá ẹgbẹ́ sílẹ̀",
+        "group_type_label": "Iru ẹgbẹ́",
+        "group_type_tontine": "Ifipamọ ẹgbẹ́ (Tontine)",
+        "group_type_micro_savings": "Micro-Savings (Àfojúsùn ti ara ẹni)",
+        "include_admin_as_member_title": "Fi mi kun gẹ́gẹ́ bí ọmọ ẹgbẹ́",
+        "include_admin_as_member_desc": "Mú ṣiṣẹ́ nìkan tí o bá fẹ́ tún kópa gẹ́gẹ́ bí alábàáṣiṣẹ́."
     },
     "dashboard": {
         "title": "Akopọ Ẹgbẹ",
@@ -189,6 +198,7 @@
         "active_groups": "Àwọn Ẹgbẹ́ Tí Ó Ń Ṣiṣẹ́",
         "contributions_volume": "Ìwọ̀n Àwọn Ìfowópamọ́",
         "payouts_volume": "Ìwọ̀n Àwọn Ìsanwó",
+        "commissions_volume": "Ìwọ̀n Kọmísàn",
         "platform_users": "Àwọn Olùlò Ètò",
         "users_desc": "Ṣàkóso gbogbo àwọn olùlò àti alákòóso nínú ètò DigiSav.",
         "users_db": "Àkójọpọ̀ Gbogbo Olùlò",
@@ -210,9 +220,25 @@
         "administrator": "Alákòóso",
         "moderation": "Moderation",
         "close_group": "Ti Ẹgbẹ́ Padà",
+        "close_group_title": "Ti Ẹgbẹ́ Padà",
+        "close_group_desc": "Ṣé o dájú pé o fẹ́ pa {{name}}? Àwọn ọmọ ẹgbẹ́ kò ní lè ṣe àfikún owó tàbí ìsanwó mọ́.",
         "reactivate": "Tún Padà Ṣí I",
+        "reactivate_group_title": "Tún ẹgbẹ́ ṣiṣẹ́",
+        "reactivate_group_desc": "Ṣé o dájú pé o fẹ́ tún {{name}} ṣiṣẹ́?",
         "group_status_updated": "A ti ṣe imudojuiwọn ipò ẹgbẹ́",
-        "group_status_failed": "Kò le ṣe imudojuiwọn ẹgbẹ́"
+        "group_status_failed": "Kò le ṣe imudojuiwọn ẹgbẹ́",
+        "tontine_groups": "Ifipamọ ẹgbẹ́ (Tontine)",
+        "micro_savings_groups": "Àwọn ẹgbẹ́ Micro-Savings",
+        "reset_admin": "Tun Admin ṣe",
+        "reset_admin_title": "Tun àkọọ́lẹ̀ Admin ṣe",
+        "reset_admin_desc": "Èyí yóò dá ọna asopọ ìtúnṣe ọrọigbaniwọle sílẹ̀ fún {{name}} àti yóò já wọn jáde nínú gbogbo ìpẹ̀yà. Tẹ̀síwájú?",
+        "cannot_reset_sysadmin": "Kò le tun System Admin ṣe",
+        "cannot_reset_self": "O kò le tun àkọọ́lẹ̀ tirẹ̀ ṣe níbí",
+        "reset_link_created": "A ti dá ọna asopọ ìtúnṣe sílẹ̀",
+        "reset_failed": "Kò le dá ọna asopọ ìtúnṣe sílẹ̀",
+        "reset_link_title": "Ọ̀nà Asopọ̀ Ìtúnṣe Ọrọigbaniwọle",
+        "reset_link_expires": "Yóò parí: {{date}}",
+        "open_reset": "Ṣí ojúewé ìtúnṣe"
     },
     "reports": {
         "type": "Iru Iroyin",

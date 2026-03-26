@@ -21,6 +21,11 @@ export const sysAdminService = {
         return response.data.data;
     },
 
+    resetAdminPassword: async (userId: string) => {
+        const response = await api.post(`/sysadmin/users/${userId}/reset-password`);
+        return response.data.data;
+    },
+
     deleteUser: async (userId: string) => {
         const response = await api.delete(`/sysadmin/users/${userId}`);
         return response.data.data;

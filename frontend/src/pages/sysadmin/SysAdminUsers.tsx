@@ -5,6 +5,7 @@ import { toast } from 'react-hot-toast';
 import { useState } from 'react';
 import { ConfirmActionModal } from '@/components/common/ConfirmActionModal';
 import { authService } from '@/services/auth.service';
+import { Copy, X } from 'lucide-react';
 
 export function SysAdminUsers() {
     const { t } = useTranslation();
@@ -23,6 +24,13 @@ export function SysAdminUsers() {
         onConfirm: () => {},
         variant: 'warning'
     });
+
+    const [resetResult, setResetResult] = useState<null | {
+        fullName: string;
+        email: string;
+        resetUrl: string;
+        expiresAt: string;
+    }>(null);
 
     const { data: users, isLoading } = useQuery({
         queryKey: ['sysadmin-users'],
@@ -48,6 +56,24 @@ export function SysAdminUsers() {
         onError: (err: any) => {
             const msg = err?.response?.data?.error?.message || err?.response?.data?.message;
             toast.error(msg || t('sysadmin.user_deleted_failed') || 'Failed to delete user');
+        },
+    });
+
+    const resetMutation = useMutation({
+        mutationFn: (userId: string) => sysAdminService.resetAdminPassword(userId),
+        onSuccess: (data: any) => {
+            queryClient.invalidateQueries({ queryKey: ['sysadmin-users'] });
+            toast.success(t('sysadmin.reset_link_created', 'Reset link created'));
+            setResetResult({
+                fullName: data.fullName,
+                email: data.email,
+                resetUrl: data.resetUrl,
+                expiresAt: data.expiresAt,
+            });
+        },
+        onError: (err: any) => {
+            const msg = err?.response?.data?.error?.message || err?.response?.data?.message;
+            toast.error(msg || t('sysadmin.reset_failed', 'Failed to create reset link'));
         },
     });
 
@@ -106,6 +132,28 @@ export function SysAdminUsers() {
             variant: 'danger',
             onConfirm: () => {
                 deleteMutation.mutate(userId);
+                setConfirmModal(prev => ({ ...prev, isOpen: false }));
+            }
+        });
+    };
+
+    const handleResetAdminPassword = (userId: string, userRole: string, userName: string) => {
+        if (userRole === 'SYS_ADMIN') {
+            toast.error(t('sysadmin.cannot_reset_sysadmin', 'Cannot reset a System Admin user'));
+            return;
+        }
+        if (currentUser?.id && currentUser.id === userId) {
+            toast.error(t('sysadmin.cannot_reset_self', 'You cannot reset your own account here'));
+            return;
+        }
+
+        setConfirmModal({
+            isOpen: true,
+            title: t('sysadmin.reset_admin_title', 'Reset Admin Account'),
+            description: String(t('sysadmin.reset_admin_desc', { name: userName, defaultValue: `This will generate a password reset link for ${userName} and log them out of all sessions. Continue?` } as any)),
+            variant: 'warning',
+            onConfirm: () => {
+                resetMutation.mutate(userId);
                 setConfirmModal(prev => ({ ...prev, isOpen: false }));
             }
         });
@@ -193,6 +241,18 @@ export function SysAdminUsers() {
                                     {t('common.delete') || 'Delete'}
                                 </button>
                             </div>
+
+                            {u.role === 'ADMIN' ? (
+                                <div className="mt-3">
+                                    <button
+                                        onClick={() => handleResetAdminPassword(u.id, u.role, u.fullName)}
+                                        disabled={resetMutation.isPending}
+                                        className="w-full py-3 rounded-2xl text-[10px] font-bold uppercase tracking-widest transition-colors border bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/15 border-indigo-500/20 disabled:opacity-40 disabled:cursor-not-allowed"
+                                    >
+                                        {t('sysadmin.reset_admin', 'Reset Admin')}
+                                    </button>
+                                </div>
+                            ) : null}
                         </div>
                     ))}
                 </div>
@@ -256,6 +316,15 @@ export function SysAdminUsers() {
                                     </td>
                                     <td className="px-6 md:px-8 py-5 text-right">
                                         <div className="flex items-center justify-end gap-2">
+                                            {u.role === 'ADMIN' ? (
+                                                <button
+                                                    onClick={() => handleResetAdminPassword(u.id, u.role, u.fullName)}
+                                                    disabled={resetMutation.isPending}
+                                                    className="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/20 border border-indigo-500/20 disabled:opacity-40 disabled:cursor-not-allowed"
+                                                >
+                                                    {t('sysadmin.reset_admin', 'Reset Admin')}
+                                                </button>
+                                            ) : null}
                                             <button
                                                 onClick={() => handleStatusToggle(u.id, u.status, u.fullName)}
                                                 disabled={u.role === 'SYS_ADMIN'}
@@ -295,8 +364,65 @@ export function SysAdminUsers() {
                 title={confirmModal.title}
                 description={confirmModal.description}
                 variant={confirmModal.variant}
-                isLoading={updateMutation.isPending || deleteMutation.isPending}
+                isLoading={updateMutation.isPending || deleteMutation.isPending || resetMutation.isPending}
             />
+
+            {resetResult ? (
+                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+                    <div
+                        className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm"
+                        onClick={() => setResetResult(null)}
+                    />
+                    <div className="relative w-full max-w-lg glass-card p-6 md:p-8 border border-white/10 rounded-3xl">
+                        <button
+                            onClick={() => setResetResult(null)}
+                            className="absolute top-4 right-4 p-2 text-slate-500 hover:text-white transition-colors"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+
+                        <div className="space-y-2">
+                            <div className="text-xl font-bold text-white">{t('sysadmin.reset_link_title', 'Password Reset Link')}</div>
+                            <div className="text-sm text-slate-400">
+                                {resetResult.fullName} • {resetResult.email}
+                            </div>
+                        </div>
+
+                        <div className="mt-5 p-4 rounded-2xl bg-white/[0.03] border border-white/10 break-all text-sm text-slate-200">
+                            {resetResult.resetUrl}
+                        </div>
+
+                        <div className="mt-3 text-xs text-slate-500">
+                            {String(t('sysadmin.reset_link_expires', { date: new Date(resetResult.expiresAt).toLocaleString() } as any))}
+                        </div>
+
+                        <div className="mt-6 flex flex-col sm:flex-row gap-3">
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        await navigator.clipboard.writeText(resetResult.resetUrl);
+                                        toast.success(t('common.copied', 'Copied'));
+                                    } catch {
+                                        toast.error(t('common.copy_failed', 'Copy failed'));
+                                    }
+                                }}
+                                className="glass-button btn-secondary px-5 py-3 rounded-2xl text-sm font-bold flex items-center justify-center gap-2"
+                            >
+                                <Copy className="w-4 h-4" />
+                                {t('common.copy', 'Copy')}
+                            </button>
+                            <a
+                                href={resetResult.resetUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="glass-button btn-primary px-5 py-3 rounded-2xl text-sm font-bold text-center"
+                            >
+                                {t('sysadmin.open_reset', 'Open reset page')}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            ) : null}
         </div>
     );
 }

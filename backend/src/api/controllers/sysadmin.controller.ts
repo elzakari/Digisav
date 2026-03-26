@@ -3,6 +3,7 @@ import prisma from '@/lib/prisma';
 import crypto from 'crypto';
 import { AuthRequest } from '@/api/middleware/auth.middleware';
 import bcrypt from 'bcrypt';
+import { PasswordResetService } from '@/services/auth/password-reset.service';
 
 export const sysAdminController = {
     // Get platform-wide metrics
@@ -17,7 +18,29 @@ export const sysAdminController = {
             const activeGroups = await prisma.group.count({ where: { status: 'ACTIVE' } });
             const closedGroups = await prisma.group.count({ where: { status: 'CLOSED' } });
 
-            const [contribByCurrency, payoutByCurrency, usersByRole, usersByStatus] = await Promise.all([
+            const [groupsByTypeResult, activeGroupsByTypeResult] = await Promise.allSettled([
+                prisma.group.groupBy({
+                    by: ['groupType'],
+                    _count: { _all: true },
+                }),
+                prisma.group.groupBy({
+                    by: ['groupType'],
+                    where: { status: 'ACTIVE' },
+                    _count: { _all: true },
+                }),
+            ]);
+
+            const groupsByType = groupsByTypeResult.status === 'fulfilled' ? groupsByTypeResult.value : [];
+            const activeGroupsByType = activeGroupsByTypeResult.status === 'fulfilled' ? activeGroupsByTypeResult.value : [];
+
+            const [
+                contribByCurrencyResult,
+                payoutByCurrencyResult,
+                feeByCurrencyResult,
+                usersByRoleResult,
+                usersByStatusResult,
+                transactionsByTypeResult,
+            ] = await Promise.allSettled([
                 prisma.transaction.groupBy({
                     by: ['currencyCode'],
                     where: { transactionType: 'CONTRIBUTION' },
@@ -28,6 +51,11 @@ export const sysAdminController = {
                     where: { transactionType: 'PAYOUT' },
                     _sum: { amount: true },
                 }),
+                prisma.transaction.groupBy({
+                    by: ['currencyCode'],
+                    where: { transactionType: 'FEE' },
+                    _sum: { amount: true },
+                }),
                 prisma.user.groupBy({
                     by: ['role'],
                     _count: { _all: true },
@@ -36,7 +64,18 @@ export const sysAdminController = {
                     by: ['status'],
                     _count: { _all: true },
                 }),
+                prisma.transaction.groupBy({
+                    by: ['transactionType'],
+                    _count: { _all: true },
+                }),
             ]);
+
+            const contribByCurrency = contribByCurrencyResult.status === 'fulfilled' ? contribByCurrencyResult.value : [];
+            const payoutByCurrency = payoutByCurrencyResult.status === 'fulfilled' ? payoutByCurrencyResult.value : [];
+            const feeByCurrency = feeByCurrencyResult.status === 'fulfilled' ? feeByCurrencyResult.value : [];
+            const usersByRole = usersByRoleResult.status === 'fulfilled' ? usersByRoleResult.value : [];
+            const usersByStatus = usersByStatusResult.status === 'fulfilled' ? usersByStatusResult.value : [];
+            const transactionsByType = transactionsByTypeResult.status === 'fulfilled' ? transactionsByTypeResult.value : [];
 
             const contributionsByCurrency = contribByCurrency
                 .map((r) => ({ currencyCode: r.currencyCode, total: Number(r._sum.amount || 0) }))
@@ -46,8 +85,27 @@ export const sysAdminController = {
                 .map((r) => ({ currencyCode: r.currencyCode, total: Number(r._sum.amount || 0) }))
                 .sort((a, b) => b.total - a.total);
 
+            const feesByCurrency = feeByCurrency
+                .map((r) => ({ currencyCode: r.currencyCode, total: Number(r._sum.amount || 0) }))
+                .sort((a, b) => b.total - a.total);
+
             const totalContributionsVolume = contributionsByCurrency.reduce((acc, r) => acc + r.total, 0);
             const totalPayoutsVolume = payoutsByCurrency.reduce((acc, r) => acc + r.total, 0);
+            const totalFeesVolume = feesByCurrency.reduce((acc, r) => acc + r.total, 0);
+
+            const groupTypes = groupsByType.length
+                ? groupsByType.reduce((acc: any, r: any) => {
+                    acc[r.groupType] = r._count._all;
+                    return acc;
+                }, {})
+                : { TONTINE: totalGroups };
+
+            const activeGroupTypes = activeGroupsByType.length
+                ? activeGroupsByType.reduce((acc: any, r: any) => {
+                    acc[r.groupType] = r._count._all;
+                    return acc;
+                }, {})
+                : { TONTINE: activeGroups };
 
             const roles = usersByRole.reduce((acc: any, r) => {
                 acc[r.role] = r._count._all;
@@ -56,6 +114,11 @@ export const sysAdminController = {
 
             const userStatuses = usersByStatus.reduce((acc: any, r) => {
                 acc[r.status] = r._count._all;
+                return acc;
+            }, {});
+
+            const transactionTypeCounts = transactionsByType.reduce((acc: any, r) => {
+                acc[r.transactionType] = r._count._all;
                 return acc;
             }, {});
 
@@ -71,14 +134,19 @@ export const sysAdminController = {
                         total: totalGroups,
                         active: activeGroups,
                         closed: closedGroups,
+                        byType: groupTypes,
+                        activeByType: activeGroupTypes,
                     },
                     transactions: {
                         totalCount: totalTransactions,
+                        byType: transactionTypeCounts,
                         totalContributionsVolume,
                         totalPayoutsVolume,
+                        totalFeesVolume,
                         contributionsByCurrency,
                         payoutsByCurrency,
-                        multiCurrency: contributionsByCurrency.length > 1 || payoutsByCurrency.length > 1,
+                        feesByCurrency,
+                        multiCurrency: contributionsByCurrency.length > 1 || payoutsByCurrency.length > 1 || feesByCurrency.length > 1,
                     },
                 }
             });
@@ -165,6 +233,61 @@ export const sysAdminController = {
         } catch (error) {
             console.error('Error updating user:', error);
             res.status(500).json({ status: 'error', message: 'Failed to update user' });
+        }
+    },
+
+    resetAdminPassword: async (req: AuthRequest, res: Response) => {
+        try {
+            const targetUserId = req.params.userId as string;
+            const actorUserId = req.user?.id;
+
+            if (!actorUserId) {
+                return res.status(401).json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Not authenticated' } });
+            }
+
+            if (targetUserId === actorUserId) {
+                return res.status(400).json({ success: false, error: { code: 'BAD_REQUEST', message: 'You cannot reset your own account here' } });
+            }
+
+            const target = await prisma.user.findUnique({
+                where: { id: targetUserId },
+                select: {
+                    id: true,
+                    role: true,
+                    status: true,
+                    fullName: true,
+                    email: true,
+                },
+            });
+
+            if (!target) {
+                return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'User not found' } });
+            }
+
+            if (target.role === 'SYS_ADMIN') {
+                return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Cannot reset a SYS_ADMIN user' } });
+            }
+
+            if (target.role !== 'ADMIN') {
+                return res.status(400).json({ success: false, error: { code: 'BAD_REQUEST', message: 'Only ADMIN accounts can be reset from SYS_ADMIN panel' } });
+            }
+
+            const resetService = new PasswordResetService();
+            const result = await resetService.createResetForUserId(targetUserId);
+
+            return res.status(200).json({
+                success: true,
+                data: {
+                    userId: target.id,
+                    email: target.email,
+                    fullName: target.fullName,
+                    resetUrl: result.resetUrl,
+                    expiresAt: result.expiresAt,
+                },
+            });
+        } catch (error) {
+            console.error('Error resetting admin password:', error);
+            res.status(500).json({ status: 'error', message: 'Failed to initiate password reset' });
         }
     },
 

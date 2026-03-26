@@ -12,6 +12,7 @@ router.get('/stats', sysAdminController.getPlatformStats);
 router.get('/users', sysAdminController.getAllUsers);
 router.get('/groups', sysAdminController.getAllGroups);
 router.patch('/users/:userId', sysAdminController.updateUser);
+router.post('/users/:userId/reset-password', sysAdminController.resetAdminPassword);
 router.delete('/users/:userId', sysAdminController.deleteUser);
 router.patch('/groups/:groupId', sysAdminController.updateGroupStatus);
 

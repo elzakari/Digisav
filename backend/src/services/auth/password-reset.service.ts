@@ -63,4 +63,26 @@ export class PasswordResetService {
             prisma.refreshToken.deleteMany({ where: { userId: resetToken.userId } }),
         ]);
     }
+
+    async createResetForUserId(userId: string) {
+        const user = await prisma.user.findUnique({ where: { id: userId } });
+        if (!user) {
+            throw new NotFoundError('User');
+        }
+
+        await prisma.passwordResetToken.deleteMany({ where: { userId } });
+
+        const token = crypto.randomBytes(32).toString('hex');
+        const expiresAt = new Date(Date.now() + TOKEN_EXPIRY_MINUTES * 60 * 1000);
+
+        await prisma.$transaction([
+            prisma.passwordResetToken.create({
+                data: { token, userId, expiresAt },
+            }),
+            prisma.refreshToken.deleteMany({ where: { userId } }),
+        ]);
+
+        const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password?token=${token}`;
+        return { resetUrl, expiresAt };
+    }
 }

@@ -28,7 +28,10 @@
         "standard_micro": "Standard + Micro",
         "report_error": "An kasa samar da rahoto",
         "start_date": "Ranar Farawa",
-        "end_date": "Ranar Gamawa"
+        "end_date": "Ranar Gamawa",
+        "copy": "Kwafi",
+        "copied": "An kwafi",
+        "copy_failed": "An kasa kwafi"
     },
     "settings": {
         "title": "Saitunan Asusun",
@@ -134,7 +137,13 @@
         "edit_member_desc": "Sabunta cikakken bayanin mamba da yanayin shiga rukuni.",
         "group_name_placeholder": "Shigar da sunan rukuni...",
         "members_selected": "Mambobi da aka zaɓa",
-        "apply_bulk_actions": "Aiwatar da ayyukan bulk"
+        "apply_bulk_actions": "Aiwatar da ayyukan bulk",
+        "failed_create_group": "An kasa ƙirƙirar rukuni",
+        "group_type_label": "Nau'in rukuni",
+        "group_type_tontine": "Adana na rukuni (Tontine)",
+        "group_type_micro_savings": "Micro-Savings (Manufofin kai)",
+        "include_admin_as_member_title": "Hada ni a matsayin mamba",
+        "include_admin_as_member_desc": "Kunna ne kawai idan kai ma kana son bayar da gudunmawa a matsayin mai shiga."
     },
     "dashboard": {
         "title": "Bayanin Rukuni",
@@ -170,6 +179,7 @@
         "active_groups": "Rukunonin Masu Aiki",
         "contributions_volume": "Yawan Gudunmawa",
         "payouts_volume": "Yawan Raba Kudi",
+        "commissions_volume": "Yawan Komishan",
         "platform_users": "Masu Amfani da Tsarin",
         "users_desc": "Sarrafa duk masu amfani da suka yi rijista da masu gudanarwa a duk tsarin DigiSav.",
         "users_db": "Taskar Duk Masu Amfani",
@@ -191,9 +201,25 @@
         "administrator": "Mai Gudanarwa",
         "moderation": "Moderation",
         "close_group": "Rufe Rukuni",
+        "close_group_title": "Rufe Rukuni",
+        "close_group_desc": "Kana da tabbacin kana son rufe {{name}}? Mambobi ba za su iya yin gudunmawa ko raba kudi ba.",
         "reactivate": "Sake Kunnawa",
+        "reactivate_group_title": "Sake kunna rukuni",
+        "reactivate_group_desc": "Kana da tabbacin kana son sake kunna {{name}}?",
         "group_status_updated": "An sabunta matsayin rukuni",
-        "group_status_failed": "An kasa sabunta rukuni"
+        "group_status_failed": "An kasa sabunta rukuni",
+        "tontine_groups": "Adana na rukuni (Tontine)",
+        "micro_savings_groups": "Rukunonin Micro-Savings",
+        "reset_admin": "Sake saita Admin",
+        "reset_admin_title": "Sake saita asusun Admin",
+        "reset_admin_desc": "Wannan zai samar da hanyar sake saita kalmar sirri ga {{name}} kuma ya fitar da su daga dukkan zaman shiga. Ka ci gaba?",
+        "cannot_reset_sysadmin": "Ba za a iya sake saita Admin na Tsarin ba",
+        "cannot_reset_self": "Ba za ka iya sake saita asusunka a nan ba",
+        "reset_link_created": "An ƙirƙiri hanyar sake saita",
+        "reset_failed": "An kasa ƙirƙirar hanyar sake saita",
+        "reset_link_title": "Hanyar Sake Saita Kalmar Sirri",
+        "reset_link_expires": "Zai ƙare: {{date}}",
+        "open_reset": "Bude shafin sake saita"
     },
     "reports": {
         "type": "Nau'in Rahoto",

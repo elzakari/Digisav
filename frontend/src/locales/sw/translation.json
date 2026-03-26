@@ -28,7 +28,10 @@
         "title": "Kichwa cha Habari",
         "message": "Ujumbe",
         "set_current": "Weka kama Sasa",
-        "standard_micro": "Standard + Micro"
+        "standard_micro": "Standard + Micro",
+        "copy": "Nakili",
+        "copied": "Imenakiliwa",
+        "copy_failed": "Imeshindwa kunakili"
     },
     "dashboard": {
         "title": "Uchambuzi wa Kikundi",
@@ -184,7 +187,13 @@
         "edit_member_desc": "Sasisha maelezo ya mwanachama na hali ya ushiriki wa kikundi.",
         "group_name_placeholder": "Ingiza jina la kikundi...",
         "members_selected": "Wanachama Waliochaguliwa",
-        "apply_bulk_actions": "Tumia vitendo vya pamoja"
+        "apply_bulk_actions": "Tumia vitendo vya pamoja",
+        "failed_create_group": "Imeshindwa kuunda kikundi",
+        "group_type_label": "Aina ya kikundi",
+        "group_type_tontine": "Akiba ya kikundi (Tontine)",
+        "group_type_micro_savings": "Akiba ndogo (Malengo binafsi)",
+        "include_admin_as_member_title": "Nijumuishe kama mwanachama",
+        "include_admin_as_member_desc": "Washa tu ikiwa unataka pia kuchangia kama mshiriki."
     },
     "sysadmin": {
         "platform_overview": "Uchambuzi wa Platform",
@@ -195,6 +204,7 @@
         "active_groups": "Vikundi Vilivyo Hai",
         "contributions_volume": "Kiasi cha Michango",
         "payouts_volume": "Kiasi cha Malipo",
+        "commissions_volume": "Kiasi cha Kamisheni",
         "platform_users": "Watumiaji wa Platform",
         "users_desc": "Simamia watumiaji na wasimamizi wote waliosajiliwa kwenye mfumo wa DigiSav.",
         "users_db": "Database ya Watumiaji Wote",
@@ -216,9 +226,25 @@
         "administrator": "Msimamizi",
         "moderation": "Moderation",
         "close_group": "Funga Kikundi",
+        "close_group_title": "Funga Kikundi",
+        "close_group_desc": "Una uhakika unataka kufunga {{name}}? Wanachama hawataweza tena kutoa michango au malipo.",
         "reactivate": "Anzisha Tena",
+        "reactivate_group_title": "Anzisha Kikundi Tena",
+        "reactivate_group_desc": "Una uhakika unataka kuanzisha {{name}} tena?",
         "group_status_updated": "Hali ya kikundi imesasishwa",
-        "group_status_failed": "Imeshindwa kusasisha kikundi"
+        "group_status_failed": "Imeshindwa kusasisha kikundi",
+        "tontine_groups": "Akiba ya kikundi (Tontine)",
+        "micro_savings_groups": "Vikundi vya Akiba Ndogo",
+        "reset_admin": "Weka upya Admin",
+        "reset_admin_title": "Weka upya akaunti ya Admin",
+        "reset_admin_desc": "Hii itazalisha kiungo cha kuweka upya nenosiri kwa {{name}} na kuwatoa kwenye vikao vyote. Endelea?",
+        "cannot_reset_sysadmin": "Haiwezekani kuweka upya Msimamizi wa Mfumo",
+        "cannot_reset_self": "Huwezi kuweka upya akaunti yako hapa",
+        "reset_link_created": "Kiungo cha kuweka upya kimeundwa",
+        "reset_failed": "Imeshindwa kuunda kiungo cha kuweka upya",
+        "reset_link_title": "Kiungo cha Kuweka Upya Nenosiri",
+        "reset_link_expires": "Inaisha: {{date}}",
+        "open_reset": "Fungua ukurasa wa kuweka upya"
     },
     "reports": {
         "type": "Aina ya Ripoti",

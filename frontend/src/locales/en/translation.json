@@ -82,7 +82,10 @@
         "message": "Message",
         "report_error": "Failed to generate report",
         "start_date": "Start Date",
-        "end_date": "End Date"
+        "end_date": "End Date",
+        "copy": "Copy",
+        "copied": "Copied",
+        "copy_failed": "Copy failed"
     },
     "role": {
         "ADMIN": "System Admin",
@@ -178,7 +181,13 @@
         "edit_member_desc": "Update member details and group participation status.",
         "group_name_placeholder": "Enter group name...",
         "members_selected": "Members Selected",
-        "apply_bulk_actions": "Apply bulk actions"
+        "apply_bulk_actions": "Apply bulk actions",
+        "failed_create_group": "Failed to create group",
+        "group_type_label": "Group Type",
+        "group_type_tontine": "Group Savings (Tontine)",
+        "group_type_micro_savings": "Micro-Savings (Personal Targets)",
+        "include_admin_as_member_title": "Include me as a member",
+        "include_admin_as_member_desc": "Enable only if you also want to contribute as a participant."
     },
     "dashboard": {
         "title": "Group Overview",
@@ -373,6 +382,7 @@
         "active_groups": "Active Groups",
         "contributions_volume": "Contributions Volume",
         "payouts_volume": "Payouts Volume",
+        "commissions_volume": "Commissions Volume",
         "platform_users": "Platform Users",
         "groups_moderation": "Groups Moderation",
         "user_roles": "User Roles",
@@ -410,9 +420,25 @@
         "administrator": "Administrator",
         "moderation": "Moderation",
         "close_group": "Close Group",
+        "close_group_title": "Close Group",
+        "close_group_desc": "Are you sure you want to close {{name}}? Members will no longer be able to make contributions or payouts.",
         "reactivate": "Reactivate",
+        "reactivate_group_title": "Reactivate Group",
+        "reactivate_group_desc": "Are you sure you want to reactivate {{name}}?",
         "group_status_updated": "Group status updated",
-        "group_status_failed": "Failed to update group"
+        "group_status_failed": "Failed to update group",
+        "tontine_groups": "Group Savings (Tontine)",
+        "micro_savings_groups": "Micro-Savings Groups",
+        "reset_admin": "Reset Admin",
+        "reset_admin_title": "Reset Admin Account",
+        "reset_admin_desc": "This will generate a password reset link for {{name}} and log them out of all sessions. Continue?",
+        "cannot_reset_sysadmin": "Cannot reset a System Admin user",
+        "cannot_reset_self": "You cannot reset your own account here",
+        "reset_link_created": "Reset link created",
+        "reset_failed": "Failed to create reset link",
+        "reset_link_title": "Password Reset Link",
+        "reset_link_expires": "Expires: {{date}}",
+        "open_reset": "Open reset page"
     },
     "reports": {
         "type": "Report Type",

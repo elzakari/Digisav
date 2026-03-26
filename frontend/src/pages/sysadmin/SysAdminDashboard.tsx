@@ -85,14 +85,29 @@ export function SysAdminDashboard() {
                 <StatCard
                     title={t('sysadmin.total_transactions')}
                     value={stats?.transactions?.totalCount || 0}
+                    hint={stats?.transactions?.byType ? `CONTR ${stats.transactions.byType.CONTRIBUTION || 0} • PAY ${stats.transactions.byType.PAYOUT || 0} • FEE ${stats.transactions.byType.FEE || 0}` : undefined}
                     type="warning"
                 />
 
                 <StatCard
-                    title={t('sysadmin.active_groups')}
-                    value={stats?.groups?.active || 0}
+                    title={t('sysadmin.tontine_groups', 'Group Savings (Tontine)')}
+                    value={stats?.groups?.byType?.TONTINE || 0}
+                    hint={stats?.groups?.activeByType?.TONTINE ? `${stats.groups.activeByType.TONTINE} active` : '0 active'}
+                    type="success"
+                />
+                <StatCard
+                    title={t('sysadmin.micro_savings_groups', 'Micro-Savings Groups')}
+                    value={stats?.groups?.byType?.MICRO_SAVINGS || 0}
+                    hint={stats?.groups?.activeByType?.MICRO_SAVINGS ? `${stats.groups.activeByType.MICRO_SAVINGS} active` : '0 active'}
                     type="info"
                 />
+                <StatCard
+                    title={t('sysadmin.active_groups')}
+                    value={stats?.groups?.active || 0}
+                    hint={typeof stats?.groups?.closed === 'number' ? `${stats.groups.closed} closed` : undefined}
+                    type="warning"
+                />
+
                 <StatCard
                     title={t('sysadmin.contributions_volume')}
                     value={formatVolume(stats?.transactions?.totalContributionsVolume || 0, stats?.transactions?.contributionsByCurrency)}
@@ -104,6 +119,12 @@ export function SysAdminDashboard() {
                     value={formatVolume(stats?.transactions?.totalPayoutsVolume || 0, stats?.transactions?.payoutsByCurrency)}
                     hint={stats?.transactions?.payoutsByCurrency?.length > 1 ? `${stats.transactions.payoutsByCurrency.length} currencies` : undefined}
                     type="danger"
+                />
+                <StatCard
+                    title={t('sysadmin.commissions_volume', 'Commissions Volume')}
+                    value={formatVolume(stats?.transactions?.totalFeesVolume || 0, stats?.transactions?.feesByCurrency)}
+                    hint={stats?.transactions?.feesByCurrency?.length > 1 ? `${stats.transactions.feesByCurrency.length} currencies` : undefined}
+                    type="warning"
                 />
             </div>
         </div>

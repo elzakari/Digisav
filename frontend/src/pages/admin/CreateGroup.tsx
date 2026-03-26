@@ -102,21 +102,21 @@ export function CreateGroupPage() {
           <div className="space-y-6">
             <div className="space-y-1.5">
               <label className="block text-sm font-medium text-slate-300 ml-1">
-                Group Type
+                {t('admin.group_type_label', 'Group Type')}
               </label>
               <select
                 {...register('groupType')}
                 className="w-full glass-input appearance-none"
               >
-                <option value="TONTINE">Group Savings (Tontine)</option>
-                <option value="MICRO_SAVINGS">Micro-Savings (Personal Targets)</option>
+                <option value="TONTINE">{t('admin.group_type_tontine', 'Group Savings (Tontine)')}</option>
+                <option value="MICRO_SAVINGS">{t('admin.group_type_micro_savings', 'Micro-Savings (Personal Targets)')}</option>
               </select>
             </div>
 
             <label className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-white/[0.02] border border-white/5">
               <div className="space-y-1">
-                <div className="text-sm font-semibold text-slate-200">Include me as a member</div>
-                <div className="text-xs text-slate-500">Enable only if you also want to contribute as a participant.</div>
+                <div className="text-sm font-semibold text-slate-200">{t('admin.include_admin_as_member_title', 'Include me as a member')}</div>
+                <div className="text-xs text-slate-500">{t('admin.include_admin_as_member_desc', 'Enable only if you also want to contribute as a participant.')}</div>
               </div>
               <input
                 type="checkbox"

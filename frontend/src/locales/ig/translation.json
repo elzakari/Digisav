@@ -31,7 +31,10 @@
         "standard_micro": "Standard + Micro",
         "report_error": "Enweghị ike imepụta akụkọ",
         "start_date": "Ụbọchị mmalite",
-        "end_date": "Ụbọchị njedebe"
+        "end_date": "Ụbọchị njedebe",
+        "copy": "Kopị",
+        "copied": "Ekopịla",
+        "copy_failed": "Kopị dara"
     },
     "settings": {
         "title": "Ntọala Akaụntụ",
@@ -154,7 +157,13 @@
         "edit_member_desc": "Melite nkọwa ndị otu na ọkwa nsonye otu.",
         "group_name_placeholder": "Tinye aha otu...",
         "members_selected": "Ndị otu a họọrọ",
-        "apply_bulk_actions": "Tinye n'ọrụ maka ọtụtụ mmadụ"
+        "apply_bulk_actions": "Tinye n'ọrụ maka ọtụtụ mmadụ",
+        "failed_create_group": "Enweghị ike ịmepụta otu",
+        "group_type_label": "Ụdị otu",
+        "group_type_tontine": "Nchekwa otu (Tontine)",
+        "group_type_micro_savings": "Micro-Savings (Ebumnuche onwe)",
+        "include_admin_as_member_title": "Tinye m dịka onye otu",
+        "include_admin_as_member_desc": "Gbaa ya naanị ma ọ bụrụ na ịchọrọ itinye aka dịka onye sonyere."
     },
     "dashboard": {
         "title": "Nlebanya Otu",
@@ -190,6 +199,7 @@
         "active_groups": "Otu Ndị Na-arụ Ọrụ",
         "contributions_volume": "Ogo Onyinye",
         "payouts_volume": "Ogo Nkesa Ego",
+        "commissions_volume": "Ogo Komisọọn",
         "platform_users": "Ndị Ọrụ Platform",
         "users_desc": "Jikwaa ndị ọrụ niile debanyere aha na ndị nchịkwa na sistemu DigiSav niile.",
         "users_db": "Ebe Nchekwa Ndị Ọrụ Niile",
@@ -211,9 +221,25 @@
         "administrator": "Onye Nchịkwa",
         "moderation": "Moderation",
         "close_group": "Mechie Otu",
+        "close_group_title": "Mechie Otu",
+        "close_group_desc": "Ị ji n'aka na ịchọrọ imechi {{name}}? Ndị otu agaghị enwe ike ịkwụ ụgwọ ma ọ bụ ịnakọta ụgwọ ọzọ.",
         "reactivate": "Mee ka ọ rụọ ọrụ ọzọ",
+        "reactivate_group_title": "Megharịa Otu",
+        "reactivate_group_desc": "Ị ji n'aka na ịchọrọ imegharịa {{name}}?",
         "group_status_updated": "Emelitere ọkwa otu",
-        "group_status_failed": "A kụrụ afọ n'ala imelite otu"
+        "group_status_failed": "A kụrụ afọ n'ala imelite otu",
+        "tontine_groups": "Nchekwa otu (Tontine)",
+        "micro_savings_groups": "Otu Micro-Savings",
+        "reset_admin": "Tọọgharịa Admin",
+        "reset_admin_title": "Tọọgharịa akaụntụ Admin",
+        "reset_admin_desc": "Nke a ga-emepụta njikọ ịtọgharịa paswọọdụ maka {{name}} ma wepụ ha na oge nbanye niile. Gaa n'ihu?",
+        "cannot_reset_sysadmin": "Enweghị ike ịtọgharịa System Admin",
+        "cannot_reset_self": "Ị gaghị enwe ike ịtọgharịa akaụntụ gị ebe a",
+        "reset_link_created": "Emepụtara njikọ ịtọgharịa",
+        "reset_failed": "Enweghị ike ịmepụta njikọ ịtọgharịa",
+        "reset_link_title": "Njikọ Ịtọgharịa Paswọọdụ",
+        "reset_link_expires": "Ga-agwụ: {{date}}",
+        "open_reset": "Mepee ibe ịtọgharịa"
     },
     "reports": {
         "type": "Ụdị Akụkọ",
