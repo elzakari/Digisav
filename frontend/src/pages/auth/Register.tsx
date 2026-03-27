@@ -33,7 +33,7 @@ export function RegisterPage() {
     >
       {error && (
         <div
-          className="mb-6 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700"
+          className="mb-6 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200"
           role="alert"
           aria-live="polite"
         >
@@ -43,82 +43,82 @@ export function RegisterPage() {
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-1.5">
-          <label htmlFor="fullName" className="block text-sm font-medium text-zinc-700">
+          <label htmlFor="fullName" className="block text-sm font-medium text-white/80">
             {t('auth.full_name', { defaultValue: 'Full Name' })}
           </label>
           <input
             id="fullName"
             {...register('fullName', { required: t('errors.full_name_required', { defaultValue: 'Full Name is required' }) })}
-            className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
+            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-white/40 outline-none backdrop-blur-md focus:border-indigo-400/70 focus:ring-2 focus:ring-indigo-500/25"
             placeholder="John Doe"
             autoComplete="name"
             aria-invalid={errors.fullName ? 'true' : 'false'}
             aria-describedby={errors.fullName ? 'fullName-error' : undefined}
           />
           {errors.fullName && (
-            <div id="fullName-error" className="text-rose-700 text-xs" role="alert">
+            <div id="fullName-error" className="text-rose-200 text-xs" role="alert">
               {errors.fullName.message as string}
             </div>
           )}
         </div>
 
         <div className="space-y-1.5">
-          <label htmlFor="regEmail" className="block text-sm font-medium text-zinc-700">
+          <label htmlFor="regEmail" className="block text-sm font-medium text-white/80">
             {t('common.email')}
           </label>
           <input
             id="regEmail"
             {...register('email', { required: t('errors.email_required') })}
             type="email"
-            className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
+            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-white/40 outline-none backdrop-blur-md focus:border-indigo-400/70 focus:ring-2 focus:ring-indigo-500/25"
             placeholder="john@example.com"
             autoComplete="email"
             aria-invalid={errors.email ? 'true' : 'false'}
             aria-describedby={errors.email ? 'regEmail-error' : undefined}
           />
           {errors.email && (
-            <div id="regEmail-error" className="text-rose-700 text-xs" role="alert">
+            <div id="regEmail-error" className="text-rose-200 text-xs" role="alert">
               {errors.email.message as string}
             </div>
           )}
         </div>
 
         <div className="space-y-1.5">
-          <label htmlFor="phoneNumber" className="block text-sm font-medium text-zinc-700">
+          <label htmlFor="phoneNumber" className="block text-sm font-medium text-white/80">
             {t('auth.phone_number', { defaultValue: 'Phone Number' })}
           </label>
           <input
             id="phoneNumber"
             {...register('phoneNumber', { required: t('errors.phone_required', { defaultValue: 'Phone Number is required' }) })}
-            className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
+            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-white/40 outline-none backdrop-blur-md focus:border-indigo-400/70 focus:ring-2 focus:ring-indigo-500/25"
             placeholder="+254 700 000000"
             autoComplete="tel"
             aria-invalid={errors.phoneNumber ? 'true' : 'false'}
             aria-describedby={errors.phoneNumber ? 'phone-error' : undefined}
           />
           {errors.phoneNumber && (
-            <div id="phone-error" className="text-rose-700 text-xs" role="alert">
+            <div id="phone-error" className="text-rose-200 text-xs" role="alert">
               {errors.phoneNumber.message as string}
             </div>
           )}
         </div>
 
         <div className="space-y-1.5">
-          <label htmlFor="regPassword" className="block text-sm font-medium text-zinc-700">
+          <label htmlFor="regPassword" className="block text-sm font-medium text-white/80">
             {t('common.password')}
           </label>
           <input
             id="regPassword"
             {...register('password', { required: t('errors.password_required') })}
             type="password"
-            className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200"
+            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-white/40 outline-none backdrop-blur-md focus:border-indigo-400/70 focus:ring-2 focus:ring-indigo-500/25"
             placeholder="••••••••"
             autoComplete="new-password"
             aria-invalid={errors.password ? 'true' : 'false'}
             aria-describedby={errors.password ? 'regPassword-error' : undefined}
           />
           {errors.password && (
-            <div id="regPassword-error" className="text-rose-700 text-xs" role="alert">
+            <div id="regPassword-error" className="text-rose-200 text-xs" role="alert">
               {errors.password.message as string}
             </div>
           )}
@@ -133,9 +133,9 @@ export function RegisterPage() {
         </button>
       </form>
 
-      <div className="mt-6 text-sm text-zinc-600">
+      <div className="mt-6 text-sm text-white/70">
         {t('auth.already_have_account', { defaultValue: 'Already have an account?' })}{' '}
-        <Link to="/login" className="font-semibold text-indigo-700 hover:text-indigo-800">
+        <Link to="/login" className="font-semibold text-indigo-200 hover:text-indigo-100">
           {t('common.login')}
         </Link>
       </div>
