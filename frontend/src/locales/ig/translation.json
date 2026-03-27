@@ -34,7 +34,9 @@
         "end_date": "Ụbọchị njedebe",
         "copy": "Kopị",
         "copied": "Ekopịla",
-        "copy_failed": "Kopị dara"
+        "copy_failed": "Kopị dara",
+        "show": "Gosi",
+        "hide": "Zoo"
     },
     "settings": {
         "title": "Ntọala Akaụntụ",
@@ -256,6 +258,10 @@
         "audit_summary_desc": "Ngụkọta ego na nnyocha",
         "generate": "Mepụta Akụkọ",
         "export_config": "Hazie mbupụ data gị",
-        "share_whatsapp": "Kesaa site na WhatsApp"
+        "share_whatsapp": "Kesaa site na WhatsApp",
+        "preview": "Nlele",
+        "preview_failed": "Enweghị ike ibu nlele. Ị ka nwere ike ibudata akụkọ.",
+        "preview_table_title": "Tebụl akụkọ",
+        "no_preview": "Enweghị nlele maka nhọrọ a."
     }
 }

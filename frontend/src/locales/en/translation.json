@@ -85,7 +85,9 @@
         "end_date": "End Date",
         "copy": "Copy",
         "copied": "Copied",
-        "copy_failed": "Copy failed"
+        "copy_failed": "Copy failed",
+        "show": "Show",
+        "hide": "Hide"
     },
     "role": {
         "ADMIN": "System Admin",
@@ -456,6 +458,10 @@
         "generate": "Generate Report",
         "export_config": "Configure your data export",
         "share_whatsapp": "Share via WhatsApp",
-        "all_members": "All members"
+        "all_members": "All members",
+        "preview": "Preview",
+        "preview_failed": "Could not load preview. You can still download the report.",
+        "preview_table_title": "Report Table",
+        "no_preview": "No preview available for this selection."
     }
 }

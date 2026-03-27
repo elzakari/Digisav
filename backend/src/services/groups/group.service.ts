@@ -18,6 +18,10 @@ export interface CreateGroupData {
   gracePeriodDays?: number;
 }
 
+type DashboardPeriod =
+  | { kind: 'current_cycle' }
+  | { kind: 'range'; from: Date; to: Date };
+
 export class GroupService {
   async createGroup(adminUserId: string, data: CreateGroupData) {
     // Generate unique group prefix
@@ -164,7 +168,7 @@ export class GroupService {
     return updated;
   }
 
-  private calculateCycleNumber(startDate: Date, targetDate: Date, frequency: PaymentFrequency): number {
+  private calculateCycleNumber(startDate: Date, targetDate: Date, frequency: PaymentFrequency, customDays?: number): number {
     const start = new Date(startDate);
     const target = new Date(targetDate);
 
@@ -179,12 +183,16 @@ export class GroupService {
         return (target.getFullYear() - start.getFullYear()) * 12 + (target.getMonth() - start.getMonth()) + 1;
       case 'DAILY':
         return Math.floor((target.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+      case 'CUSTOM': {
+        const days = customDays && customDays > 0 ? customDays : 30;
+        return Math.floor((target.getTime() - start.getTime()) / (days * 24 * 60 * 60 * 1000)) + 1;
+      }
       default:
         return (target.getFullYear() - start.getFullYear()) * 12 + (target.getMonth() - start.getMonth()) + 1;
     }
   }
 
-  private calculateDueDate(startDate: Date, cycleNumber: number, frequency: PaymentFrequency): Date {
+  private calculateDueDate(startDate: Date, cycleNumber: number, frequency: PaymentFrequency, customDays?: number): Date {
     const dueDate = new Date(startDate);
 
     switch (frequency) {
@@ -200,11 +208,29 @@ export class GroupService {
       case 'DAILY':
         dueDate.setDate(dueDate.getDate() + (cycleNumber - 1));
         break;
+      case 'CUSTOM': {
+        const days = customDays && customDays > 0 ? customDays : 30;
+        dueDate.setDate(dueDate.getDate() + (cycleNumber - 1) * days);
+        break;
+      }
       default:
         dueDate.setMonth(dueDate.getMonth() + (cycleNumber - 1));
     }
 
     return dueDate;
+  }
+
+  private addGraceDays(date: Date, gracePeriodDays: number) {
+    const d = new Date(date);
+    if (gracePeriodDays > 0) d.setDate(d.getDate() + gracePeriodDays);
+    return d;
+  }
+
+  private toIsoDateOnly(date: Date) {
+    const yyyy = date.getFullYear();
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const dd = String(date.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
   }
 
   async getGroupTransactions(groupId: string, userId: string, userRole: string) {
@@ -234,7 +260,7 @@ export class GroupService {
     });
   }
 
-  async getGroupDashboard(groupId: string, userId: string, userRole: string) {
+  async getGroupDashboard(groupId: string, userId: string, userRole: string, period?: DashboardPeriod) {
     const group = await prisma.group.findUnique({
       where: { id: groupId },
       include: {
@@ -252,79 +278,32 @@ export class GroupService {
       throw new ForbiddenError('Only group admin or system admin can view this dashboard');
     }
 
-    const today = new Date();
-    const startDate = group.startDate ? new Date(group.startDate) : today;
-    const currentCycle = this.calculateCycleNumber(startDate, today, group.paymentFrequency);
-    const currentCycleDueDate = this.calculateDueDate(startDate, currentCycle, group.paymentFrequency);
+    const now = new Date();
+    const customDays = group.customFrequencyDays ?? undefined;
+    const startDate = group.startDate ? new Date(group.startDate) : new Date(group.createdAt);
+    const resolvedPeriod: DashboardPeriod = period ?? { kind: 'current_cycle' };
 
     const activeMembers = group.members;
+    const memberIds = activeMembers.map((m) => m.id);
 
-    const totalCollectedAgg = await prisma.contribution.aggregate({
-      where: { groupId, status: 'COMPLETED' },
-      _sum: { amount: true },
-    });
-    const totalCollected = Number(totalCollectedAgg._sum.amount || 0);
-    const totalExpected = activeMembers.length * Number(group.contributionAmount) * currentCycle;
+    const currentCycle = this.calculateCycleNumber(startDate, now, group.paymentFrequency, customDays);
+    const currentCycleDueDate = this.calculateDueDate(startDate, currentCycle, group.paymentFrequency, customDays);
+    const nextCycleDueDate = this.calculateDueDate(startDate, currentCycle + 1, group.paymentFrequency, customDays);
 
-    const contributions = await prisma.contribution.findMany({
-      where: {
-        groupId,
-        cycleNumber: currentCycle,
-        memberId: { in: activeMembers.map((m) => m.id) },
-      },
-      include: { member: { include: { user: { select: { fullName: true } } } } },
-    });
+    let cycleRange: { first: number; last: number; count: number };
+    let rangeLabel: { kind: 'current_cycle' } | { kind: 'range'; from: string; to: string };
 
-    const byMemberId = new Map<string, (typeof contributions)[number]>();
-    for (const c of contributions) {
-      byMemberId.set(c.memberId, c);
-    }
-
-    const items = activeMembers.map((m) => {
-      const c = byMemberId.get(m.id);
-      if (!c) {
-        return {
-          memberId: m.id,
-          memberName: m.user?.fullName || 'Unknown',
-          status: 'DUE' as const,
-          dueDate: currentCycleDueDate,
-          paymentDate: null as Date | null,
-          amount: Number(group.contributionAmount),
-          currencyCode: group.currencyCode,
-        };
-      }
-
-      return {
-        memberId: m.id,
-        memberName: c.member?.user?.fullName || 'Unknown',
-        status: c.status === 'COMPLETED' ? ('PAID' as const) : (c.status as any),
-        dueDate: c.dueDate,
-        paymentDate: c.paymentDate,
-        amount: Number(c.amount),
-        currencyCode: c.currencyCode,
-      };
-    });
-
-    const counts = {
-      DUE: 0,
-      PAID: 0,
-      OVERDUE: 0,
-      DEFAULTED: 0,
-      PENDING: 0,
-    };
-
-    const totals = {
-      dueExpected: 0,
-      paid: 0,
-      pastDue: 0,
-    };
-
-    for (const it of items) {
-      const st = it.status as keyof typeof counts;
-      if (st in counts) counts[st] += 1;
-      if (it.status === 'DUE') totals.dueExpected += Number(group.contributionAmount);
-      if (it.status === 'PAID') totals.paid += it.amount;
-      if (it.status === 'OVERDUE' || it.status === 'DEFAULTED') totals.pastDue += it.amount;
+    if (resolvedPeriod.kind === 'current_cycle') {
+      cycleRange = { first: currentCycle, last: currentCycle, count: 1 };
+      rangeLabel = { kind: 'current_cycle' };
+    } else {
+      const from = new Date(resolvedPeriod.from);
+      const to = new Date(resolvedPeriod.to);
+      const first = this.calculateCycleNumber(startDate, from, group.paymentFrequency, customDays);
+      const last = this.calculateCycleNumber(startDate, to, group.paymentFrequency, customDays);
+      const count = Math.max(0, last - first + 1);
+      cycleRange = { first, last, count };
+      rangeLabel = { kind: 'range', from: this.toIsoDateOnly(from), to: this.toIsoDateOnly(to) };
     }
 
     const recentActivity = await prisma.transaction.findMany({
@@ -334,16 +313,280 @@ export class GroupService {
         recorder: { select: { fullName: true } },
       },
       orderBy: { timestamp: 'desc' },
-      take: 8,
+      take: 10,
     });
+
+    if (group.groupType === 'MICRO_SAVINGS') {
+      const windowStart = resolvedPeriod.kind === 'current_cycle' ? currentCycleDueDate : new Date(resolvedPeriod.from);
+      const windowEnd = resolvedPeriod.kind === 'current_cycle' ? nextCycleDueDate : new Date(resolvedPeriod.to);
+
+      const savingsGoals = await prisma.savingsGoal.findMany({
+        where: { groupId, category: 'MICRO_SAVINGS' as any },
+        select: { id: true, userId: true, currentAmount: true },
+      });
+
+      const balanceByUserId = new Map<string, number>();
+      for (const g of savingsGoals) {
+        const v = Number(g.currentAmount || 0);
+        balanceByUserId.set(g.userId, (balanceByUserId.get(g.userId) || 0) + v);
+      }
+
+      const deposits = await prisma.savingsDeposit.findMany({
+        where: {
+          depositDate: { gte: windowStart, lt: windowEnd },
+          savingsGoal: { groupId, category: 'MICRO_SAVINGS' as any },
+        },
+        select: { amount: true, userId: true },
+      });
+
+      const withdrawals = await prisma.withdrawalRequest.findMany({
+        where: {
+          groupId,
+          status: 'APPROVED' as any,
+          OR: [
+            { processedAt: { gte: windowStart, lt: windowEnd } },
+            { processedAt: null, requestedAt: { gte: windowStart, lt: windowEnd } },
+          ],
+        },
+        select: { amount: true, memberId: true },
+      });
+
+      const depositByUserId = new Map<string, number>();
+      for (const d of deposits) {
+        const v = Number(d.amount || 0);
+        depositByUserId.set(d.userId, (depositByUserId.get(d.userId) || 0) + v);
+      }
+
+      const memberIdToUserId = new Map<string, string>();
+      for (const m of activeMembers) memberIdToUserId.set(m.id, m.userId);
+
+      const withdrawalByUserId = new Map<string, number>();
+      for (const w of withdrawals) {
+        const uid = memberIdToUserId.get(w.memberId);
+        if (!uid) continue;
+        const v = Number(w.amount || 0);
+        withdrawalByUserId.set(uid, (withdrawalByUserId.get(uid) || 0) + v);
+      }
+
+      const netGroupBalance = Array.from(balanceByUserId.values()).reduce((a, b) => a + b, 0);
+      const totalDeposits = Array.from(depositByUserId.values()).reduce((a, b) => a + b, 0);
+      const totalWithdrawals = Array.from(withdrawalByUserId.values()).reduce((a, b) => a + b, 0);
+      const averageMemberBalance = activeMembers.length > 0 ? netGroupBalance / activeMembers.length : 0;
+
+      const memberStatusItems = activeMembers.map((m) => {
+        const balance = balanceByUserId.get(m.userId) || 0;
+        const dep = depositByUserId.get(m.userId) || 0;
+        const wd = withdrawalByUserId.get(m.userId) || 0;
+        return {
+          memberId: m.id,
+          memberName: m.user?.fullName || 'Unknown',
+          balance,
+          deposits: dep,
+          withdrawals: wd,
+          netChange: dep - wd,
+          currencyCode: group.currencyCode,
+        };
+      });
+
+      return {
+        group: {
+          id: group.id,
+          groupName: group.groupName,
+          groupType: group.groupType,
+          status: group.status,
+          currencyCode: group.currencyCode,
+          contributionAmount: Number(group.contributionAmount),
+          paymentFrequency: group.paymentFrequency,
+          gracePeriodDays: group.gracePeriodDays,
+          startDate: group.startDate,
+          maxMembers: group.maxMembers,
+          adminUserId: group.adminUserId,
+          activeMembersCount: activeMembers.length,
+        },
+        period: rangeLabel,
+        common: {
+          activeMembersCount: activeMembers.length,
+          totalCollected: { amount: totalDeposits, currencyCode: group.currencyCode },
+          totalOutstanding: { amount: 0, currencyCode: group.currencyCode },
+          pastDueMembersCount: 0,
+          dataAsOf: now.toISOString(),
+        },
+        microSavings: {
+          netGroupBalance: { amount: netGroupBalance, currencyCode: group.currencyCode },
+          totalDeposits: { amount: totalDeposits, currencyCode: group.currencyCode },
+          totalWithdrawals: { amount: totalWithdrawals, currencyCode: group.currencyCode },
+          averageMemberBalance: { amount: averageMemberBalance, currencyCode: group.currencyCode },
+        },
+        memberStatus: {
+          kind: 'micro_savings',
+          items: memberStatusItems,
+        },
+        recentActivity,
+      };
+    }
+
+    const contributionAmount = Number(group.contributionAmount);
+    const contributions = await prisma.contribution.findMany({
+      where: {
+        groupId,
+        cycleNumber: { gte: cycleRange.first, lte: cycleRange.last },
+        memberId: { in: memberIds },
+      },
+      select: {
+        id: true,
+        memberId: true,
+        amount: true,
+        currencyCode: true,
+        dueDate: true,
+        paymentDate: true,
+        status: true,
+        cycleNumber: true,
+      },
+      orderBy: [{ cycleNumber: 'desc' }, { paymentDate: 'desc' }],
+    });
+
+    const contribsByMemberId = new Map<string, typeof contributions>();
+    for (const c of contributions) {
+      const list = contribsByMemberId.get(c.memberId) || [];
+      list.push(c);
+      contribsByMemberId.set(c.memberId, list);
+    }
+
+    const expectedPerMember = contributionAmount * cycleRange.count;
+    let totalPaid = 0;
+    let pastDueMembersCount = 0;
+
+    const memberStatusItems = activeMembers.map((m) => {
+      const list = contribsByMemberId.get(m.id) || [];
+      const paid = list
+        .filter((c) => c.status === 'COMPLETED')
+        .reduce((sum, c) => sum + Number(c.amount || 0), 0);
+      const outstanding = Math.max(0, expectedPerMember - paid);
+      totalPaid += paid;
+
+      const lastPaymentDate = list
+        .filter((c) => c.status === 'COMPLETED')
+        .reduce<Date | null>((acc, c) => {
+          const d = c.paymentDate ? new Date(c.paymentDate) : null;
+          if (!d) return acc;
+          if (!acc) return d;
+          return d > acc ? d : acc;
+        }, null);
+
+      let status: 'PAID' | 'DUE' | 'PAST_DUE' = 'DUE';
+      if (outstanding <= 0) {
+        status = 'PAID';
+      } else {
+        let isPastDue = false;
+        for (let cycle = cycleRange.first; cycle <= cycleRange.last; cycle += 1) {
+          const due = this.calculateDueDate(startDate, cycle, group.paymentFrequency, customDays);
+          const graceDue = this.addGraceDays(due, group.gracePeriodDays);
+          if (graceDue < now) {
+            isPastDue = true;
+            break;
+          }
+        }
+        status = isPastDue ? 'PAST_DUE' : 'DUE';
+      }
+
+      if (status === 'PAST_DUE') pastDueMembersCount += 1;
+
+      return {
+        memberId: m.id,
+        memberName: m.user?.fullName || 'Unknown',
+        expected: expectedPerMember,
+        paid,
+        outstanding,
+        status,
+        lastPaymentDate,
+        currencyCode: group.currencyCode,
+      };
+    });
+
+    const totalExpected = expectedPerMember * activeMembers.length;
+    const totalCollected = totalPaid;
+    const totalOutstanding = Math.max(0, totalExpected - totalCollected);
+
+    const cycleItems = resolvedPeriod.kind === 'current_cycle'
+      ? activeMembers.map((m) => {
+          const list = contribsByMemberId.get(m.id) || [];
+          const c = list.find((x) => x.cycleNumber === currentCycle) || null;
+          const graceDue = this.addGraceDays(currentCycleDueDate, group.gracePeriodDays);
+          if (!c) {
+            const status = graceDue < now ? 'DEFAULTED' : currentCycleDueDate < now ? 'OVERDUE' : 'DUE';
+            return {
+              memberId: m.id,
+              memberName: m.user?.fullName || 'Unknown',
+              status,
+              dueDate: currentCycleDueDate,
+              paymentDate: null,
+              amount: contributionAmount,
+              currencyCode: group.currencyCode,
+            };
+          }
+          return {
+            memberId: m.id,
+            memberName: m.user?.fullName || 'Unknown',
+            status: c.status === 'COMPLETED' ? 'PAID' : (c.status as any),
+            dueDate: c.dueDate,
+            paymentDate: c.paymentDate,
+            amount: Number(c.amount || 0),
+            currencyCode: c.currencyCode,
+          };
+        })
+      : null;
+
+    const cycleCounts = cycleItems
+      ? cycleItems.reduce(
+          (acc, it) => {
+            acc[it.status] = (acc[it.status] || 0) + 1;
+            return acc;
+          },
+          { DUE: 0, PAID: 0, OVERDUE: 0, DEFAULTED: 0, PENDING: 0 } as Record<string, number>
+        )
+      : null;
+
+    const cycleTotals = cycleItems
+      ? cycleItems.reduce(
+          (acc, it) => {
+            if (it.status === 'DUE' || it.status === 'PENDING') acc.dueExpected += contributionAmount;
+            if (it.status === 'PAID') acc.paid += Number(it.amount || 0);
+            if (it.status === 'OVERDUE' || it.status === 'DEFAULTED') acc.pastDue += Number(it.amount || 0);
+            return acc;
+          },
+          { dueExpected: 0, paid: 0, pastDue: 0 }
+        )
+      : null;
+
+    const payoutSorted = [...activeMembers].sort((a, b) => (a.payoutPosition ?? 999999) - (b.payoutPosition ?? 999999));
+    const nextPayout = payoutSorted.length > 0 ? payoutSorted[0] : null;
+    const nextPayoutDate = resolvedPeriod.kind === 'current_cycle' ? currentCycleDueDate : this.calculateDueDate(startDate, cycleRange.first, group.paymentFrequency, customDays);
+
+    const byCycle = await prisma.contribution.groupBy({
+      by: ['cycleNumber'],
+      where: {
+        groupId,
+        status: 'COMPLETED',
+        cycleNumber: { gte: Math.max(1, currentCycle - 5), lte: currentCycle },
+      },
+      _sum: { amount: true },
+      orderBy: { cycleNumber: 'asc' },
+    });
+
+    const collectedByCycle = byCycle.map((row) => ({
+      cycleNumber: row.cycleNumber,
+      collected: Number(row._sum.amount || 0),
+      currencyCode: group.currencyCode,
+    }));
 
     return {
       group: {
         id: group.id,
         groupName: group.groupName,
+        groupType: group.groupType,
         status: group.status,
         currencyCode: group.currencyCode,
-        contributionAmount: Number(group.contributionAmount),
+        contributionAmount: contributionAmount,
         paymentFrequency: group.paymentFrequency,
         gracePeriodDays: group.gracePeriodDays,
         startDate: group.startDate,
@@ -351,26 +594,52 @@ export class GroupService {
         adminUserId: group.adminUserId,
         activeMembersCount: activeMembers.length,
       },
-      stats: {
-        totalExpected,
-        totalCollected,
-        outstanding: Math.max(0, totalExpected - totalCollected),
-        complianceRate: totalExpected > 0 ? (totalCollected / totalExpected) * 100 : 0,
-        currentCycle,
-        currencyCode: group.currencyCode,
+      period: rangeLabel,
+      common: {
+        activeMembersCount: activeMembers.length,
+        totalCollected: { amount: totalCollected, currencyCode: group.currencyCode },
+        totalOutstanding: { amount: totalOutstanding, currencyCode: group.currencyCode },
+        pastDueMembersCount,
+        dataAsOf: now.toISOString(),
       },
-      cycle: {
-        cycleNumber: currentCycle,
-        dueDate: currentCycleDueDate,
-        counts,
-        totals: {
-          dueExpected: totals.dueExpected,
-          paid: totals.paid,
-          pastDue: totals.pastDue,
+      tontine: {
+        currentCycleNumber: currentCycle,
+        expectedPot: { amount: contributionAmount * activeMembers.length, currencyCode: group.currencyCode },
+        currentCyclePot: {
+          amount:
+            resolvedPeriod.kind === 'current_cycle'
+              ? (cycleTotals?.paid || 0)
+              : totalCollected,
           currencyCode: group.currencyCode,
         },
-        items,
+        nextPayoutMemberId: nextPayout ? nextPayout.id : null,
+        nextPayoutDate: nextPayoutDate ? nextPayoutDate.toISOString() : null,
+        payoutQueueProgress: {
+          currentPosition: nextPayout?.payoutPosition ?? 1,
+          totalPositions: activeMembers.length,
+        },
       },
+      insights: {
+        collectedByCycle,
+      },
+      memberStatus: {
+        kind: 'tontine',
+        items: memberStatusItems,
+      },
+      cycle: cycleItems
+        ? {
+            cycleNumber: currentCycle,
+            dueDate: currentCycleDueDate,
+            counts: cycleCounts,
+            totals: {
+              dueExpected: cycleTotals?.dueExpected || 0,
+              paid: cycleTotals?.paid || 0,
+              pastDue: cycleTotals?.pastDue || 0,
+              currencyCode: group.currencyCode,
+            },
+            items: cycleItems,
+          }
+        : null,
       recentActivity,
     };
   }

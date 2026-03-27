@@ -18,6 +18,8 @@ import { groupService } from '@/services/group.service';
 import { format } from 'date-fns';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
+import { ReportPreviewTable } from '@/components/admin/reports/ReportPreviewTable';
+import { normalizeTable, parseCsv } from '@/components/admin/reports/reportCsv';
 
 interface ReportsModalProps {
   isOpen: boolean;
@@ -34,6 +36,7 @@ export function ReportsModal({ isOpen, onClose, groupId }: ReportsModalProps) {
   const [isGeneratingShare, setIsGeneratingShare] = useState(false);
   const [memberId, setMemberId] = useState<string>('');
   const [shareLink, setShareLink] = useState<string>('');
+  const [showPreview, setShowPreview] = useState(true);
   
   const [startDate, setStartDate] = useState(format(new Date(new Date().getFullYear(), new Date().getMonth(), 1), 'yyyy-MM-dd'));
   const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -89,6 +92,34 @@ export function ReportsModal({ isOpen, onClose, groupId }: ReportsModalProps) {
   }, [members, memberId]);
 
   const canScopeToMember = reportType === 'contributions' || reportType === 'payouts';
+
+  const previewQuery = useQuery({
+    queryKey: ['group-report-preview', groupId, reportType, derivedPeriod.startIso, derivedPeriod.endIso, memberId],
+    enabled: isOpen && showPreview,
+    queryFn: async () => {
+      const blob = await contributionService.downloadReport(
+        groupId,
+        derivedPeriod.startIso,
+        derivedPeriod.endIso,
+        reportType,
+        'csv',
+        canScopeToMember ? (memberId || undefined) : undefined
+      );
+
+      const text = await blob.text();
+      const parsed = normalizeTable(parseCsv(text));
+
+      const rowLimit = 50;
+      const truncated = parsed.rows.length > rowLimit;
+
+      return {
+        headers: parsed.headers,
+        rows: parsed.rows.slice(0, rowLimit),
+        truncated,
+        totalRows: parsed.rows.length,
+      };
+    },
+  });
 
   if (!isOpen) return null;
 
@@ -345,6 +376,42 @@ export function ReportsModal({ isOpen, onClose, groupId }: ReportsModalProps) {
               </button>
             ) : null}
           </div>
+
+          <div className="flex items-center justify-between gap-3">
+            <div className="text-xs font-bold text-white">{t('reports.preview', 'Preview')}</div>
+            <button
+              type="button"
+              onClick={() => setShowPreview((v) => !v)}
+              className="px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 transition-colors text-[10px] font-bold text-slate-200"
+            >
+              {showPreview ? t('common.hide', 'Hide') : t('common.show', 'Show')}
+            </button>
+          </div>
+
+          {showPreview ? (
+            previewQuery.isLoading ? (
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-8 flex items-center justify-center gap-2 text-slate-300">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span className="text-sm font-semibold">{t('common.loading', 'Loading...')}</span>
+              </div>
+            ) : previewQuery.isError ? (
+              <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-200">
+                {t('reports.preview_failed', 'Could not load preview. You can still download the report.')}
+              </div>
+            ) : previewQuery.data?.headers?.length ? (
+              <ReportPreviewTable
+                title={t('reports.preview_table_title', 'Report Table')}
+                subtitle={`${t('reports.period', 'Time Period')}: ${derivedPeriod.label} · ${t(`reports.${reportType}`)}${selectedMemberName ? ` · ${t('reports.for_member', 'For')} ${selectedMemberName}` : ''}`}
+                headers={previewQuery.data.headers}
+                rows={previewQuery.data.rows}
+                isTruncated={previewQuery.data.truncated}
+              />
+            ) : (
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-slate-400">
+                {t('reports.no_preview', 'No preview available for this selection.')}
+              </div>
+            )
+          ) : null}
 
           {/* Custom Date Selection */}
           {dateRange === 'custom' && (

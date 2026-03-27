@@ -91,7 +91,45 @@ export class GroupController {
     try {
       const userId = req.user!.id;
       const { groupId } = req.params;
-      const data = await this.groupService.getGroupDashboard(groupId as string, userId, req.user!.role);
+      const period = (req.query.period || 'current_cycle').toString();
+      const from = req.query.from ? req.query.from.toString() : undefined;
+      const to = req.query.to ? req.query.to.toString() : undefined;
+
+      let periodArg: any = { kind: 'current_cycle' };
+      if (period === 'range') {
+        if (!from || !to) {
+          return res.status(400).json({
+            success: false,
+            error: { code: 'VALIDATION_ERROR', message: 'from and to are required for range period' },
+          });
+        }
+
+        const fromDate = new Date(from);
+        const toDate = new Date(to);
+
+        if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime())) {
+          return res.status(400).json({
+            success: false,
+            error: { code: 'VALIDATION_ERROR', message: 'from and to must be valid dates (YYYY-MM-DD)' },
+          });
+        }
+
+        if (fromDate > toDate) {
+          return res.status(400).json({
+            success: false,
+            error: { code: 'VALIDATION_ERROR', message: 'from must be before to' },
+          });
+        }
+
+        const fromStart = new Date(fromDate);
+        fromStart.setHours(0, 0, 0, 0);
+        const toEnd = new Date(toDate);
+        toEnd.setHours(23, 59, 59, 999);
+
+        periodArg = { kind: 'range', from: fromStart, to: toEnd };
+      }
+
+      const data = await this.groupService.getGroupDashboard(groupId as string, userId, req.user!.role, periodArg);
 
       res.status(200).json({
         success: true,

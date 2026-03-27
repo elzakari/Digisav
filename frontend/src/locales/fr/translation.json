@@ -82,7 +82,9 @@
         "message": "Message",
         "copy": "Copier",
         "copied": "Copié",
-        "copy_failed": "Échec de la copie"
+        "copy_failed": "Échec de la copie",
+        "show": "Afficher",
+        "hide": "Masquer"
     },
     "role": {
         "ADMIN": "Admin Système",
@@ -451,6 +453,10 @@
         "audit_summary_desc": "Solde global et rapprochement",
         "generate": "Générer le rapport",
         "export_config": "Configurez votre export de données",
-        "share_whatsapp": "Partager via WhatsApp"
+        "share_whatsapp": "Partager via WhatsApp",
+        "preview": "Aperçu",
+        "preview_failed": "Impossible de charger l’aperçu. Vous pouvez toujours télécharger le rapport.",
+        "preview_table_title": "Tableau du rapport",
+        "no_preview": "Aucun aperçu disponible pour cette sélection."
     }
 }

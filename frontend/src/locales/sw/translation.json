@@ -31,7 +31,9 @@
         "standard_micro": "Standard + Micro",
         "copy": "Nakili",
         "copied": "Imenakiliwa",
-        "copy_failed": "Imeshindwa kunakili"
+        "copy_failed": "Imeshindwa kunakili",
+        "show": "Onyesha",
+        "hide": "Ficha"
     },
     "dashboard": {
         "title": "Uchambuzi wa Kikundi",
@@ -261,6 +263,10 @@
         "audit_summary_desc": "Salio la kimataifa na upatanishi",
         "generate": "Toa Ripoti",
         "export_config": "Sanidi usafirishaji wako wa data",
-        "share_whatsapp": "Shiriki kupitia WhatsApp"
+        "share_whatsapp": "Shiriki kupitia WhatsApp",
+        "preview": "Hakiki",
+        "preview_failed": "Imeshindwa kupakia hakiki. Bado unaweza kupakua ripoti.",
+        "preview_table_title": "Jedwali la ripoti",
+        "no_preview": "Hakuna hakiki inayopatikana kwa chaguo hili."
     }
 }

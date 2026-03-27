@@ -31,7 +31,9 @@
         "end_date": "Ranar Gamawa",
         "copy": "Kwafi",
         "copied": "An kwafi",
-        "copy_failed": "An kasa kwafi"
+        "copy_failed": "An kasa kwafi",
+        "show": "Nuna",
+        "hide": "Boye"
     },
     "settings": {
         "title": "Saitunan Asusun",
@@ -236,6 +238,10 @@
         "audit_summary_desc": "Jimillar balance da sulhu",
         "generate": "Samar da Rahoto",
         "export_config": "Sanya saitunanku na fitar da bayanai",
-        "share_whatsapp": "Raba ta WhatsApp"
+        "share_whatsapp": "Raba ta WhatsApp",
+        "preview": "Dubawa",
+        "preview_failed": "An kasa lodin dubawa. Har yanzu za ka iya sauke rahoton.",
+        "preview_table_title": "Teburin rahoto",
+        "no_preview": "Babu dubawa don wannan zabi."
     }
 }

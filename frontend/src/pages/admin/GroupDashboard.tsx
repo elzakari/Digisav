@@ -18,6 +18,9 @@ import { formatCurrency } from '@/utils/currencyFormatter';
 import { KpiCard } from '@/components/admin/dashboard/KpiCard';
 import { ContributionsStatusPanel } from '@/components/admin/dashboard/ContributionsStatusPanel';
 import { RecentActivityPanel } from '@/components/admin/dashboard/RecentActivityPanel';
+import { DashboardPeriodSelector, type DashboardPeriod } from '@/components/admin/dashboard/DashboardPeriodSelector';
+import { MemberStatusTable } from '@/components/admin/dashboard/MemberStatusTable';
+import { DashboardInsightsPanel } from '@/components/admin/dashboard/DashboardInsightsPanel';
 import { BarChart3, Bell, Coins, FileDown, Settings2, ShieldAlert, Trash2, UserPlus, Wallet } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -28,9 +31,29 @@ export function GroupDashboard() {
   const user = authService.getCurrentUser();
   const isSystemAdmin = user?.role === 'SYS_ADMIN';
 
+  const [dashboardPeriod, setDashboardPeriod] = useState<DashboardPeriod>(() => {
+    const today = new Date();
+    const from = new Date();
+    from.setDate(from.getDate() - 30);
+    const toIso = (d: Date) => d.toISOString().slice(0, 10);
+    return { kind: 'current_cycle', fallbackRange: { from: toIso(from), to: toIso(today) } };
+  });
+
   const { data: dashboard, isLoading: dashboardLoading } = useQuery({
-    queryKey: ['group-dashboard', groupId],
-    queryFn: () => groupService.getGroupDashboard(groupId!),
+    queryKey: [
+      'group-dashboard',
+      groupId,
+      dashboardPeriod.kind,
+      dashboardPeriod.kind === 'range' ? dashboardPeriod.from : undefined,
+      dashboardPeriod.kind === 'range' ? dashboardPeriod.to : undefined,
+    ],
+    queryFn: () =>
+      groupService.getGroupDashboard(
+        groupId!,
+        dashboardPeriod.kind === 'range'
+          ? { period: 'range', from: dashboardPeriod.from, to: dashboardPeriod.to }
+          : { period: 'current_cycle' }
+      ),
     enabled: !!groupId,
   });
 
@@ -163,7 +186,7 @@ export function GroupDashboard() {
   );
 
   const currencyCode = dashboard?.group?.currencyCode || group?.currencyCode || 'KES';
-  const stats = dashboard?.stats;
+  const groupType = dashboard?.group?.groupType || group?.groupType;
 
   return (
     <div className="w-full space-y-10 animate-fade-in">
@@ -176,8 +199,21 @@ export function GroupDashboard() {
             <span className="text-slate-400">{t('common.dashboard')}</span>
           </div>
           <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">{t('dashboard.title')}</h1>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            {groupType ? (
+              <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-white/10 bg-white/5 text-white/80">
+                {groupType === 'MICRO_SAVINGS' ? 'Micro‑Savings' : 'Tontine'}
+              </span>
+            ) : null}
+            {dashboard?.common?.dataAsOf ? (
+              <span className="text-xs text-white/50">
+                Data as of {new Date(dashboard.common.dataAsOf).toLocaleString()}
+              </span>
+            ) : null}
+          </div>
         </div>
         <div className="flex flex-col items-start gap-3">
+          <DashboardPeriodSelector value={dashboardPeriod} onChange={setDashboardPeriod} />
           <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={() => setIsInviteModalOpen(true)}
@@ -234,47 +270,107 @@ export function GroupDashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <KpiCard
-          title={t('dashboard.total_expected')}
-          value={formatCurrency(stats?.totalExpected || 0, 0, currencyCode)}
-          hint={dashboard?.cycle?.cycleNumber ? `Cycle ${dashboard.cycle.cycleNumber}` : undefined}
-          icon={<Coins className="w-5 h-5" />}
-          onClick={() => setCycleFilter('due')}
-        />
-        <KpiCard
-          title={t('dashboard.total_collected')}
-          value={formatCurrency(stats?.totalCollected || 0, 0, currencyCode)}
-          hint={dashboard?.cycle?.counts?.PAID ? `${dashboard.cycle.counts.PAID} paid this cycle` : undefined}
-          icon={<Wallet className="w-5 h-5" />}
-          onClick={() => setCycleFilter('paid')}
-        />
-        <KpiCard
-          title={t('dashboard.outstanding')}
-          value={formatCurrency(stats?.outstanding || 0, 0, currencyCode)}
-          hint={dashboard?.cycle?.counts?.DUE ? `${dashboard.cycle.counts.DUE} due this cycle` : undefined}
-          icon={<BarChart3 className="w-5 h-5" />}
-          onClick={() => setCycleFilter('due')}
-        />
-        <KpiCard
-          title="Past due"
-          value={`${(dashboard?.cycle?.counts?.OVERDUE || 0) + (dashboard?.cycle?.counts?.DEFAULTED || 0)}`}
-          hint={dashboard?.cycle?.totals?.pastDue ? formatCurrency(dashboard.cycle.totals.pastDue, 0, currencyCode) : undefined}
-          icon={<ShieldAlert className="w-5 h-5" />}
-          onClick={() => setCycleFilter('past_due')}
-        />
+      {dashboard?.common ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <KpiCard
+            title="Active members"
+            value={`${dashboard.common.activeMembersCount || 0}`}
+            icon={<UserPlus className="w-5 h-5" />}
+          />
+          <KpiCard
+            title={t('dashboard.total_collected')}
+            value={formatCurrency(dashboard.common.totalCollected?.amount || 0, 0, currencyCode)}
+            icon={<Wallet className="w-5 h-5" />}
+            onClick={() => setCycleFilter('paid')}
+          />
+          <KpiCard
+            title={t('dashboard.outstanding')}
+            value={formatCurrency(dashboard.common.totalOutstanding?.amount || 0, 0, currencyCode)}
+            icon={<BarChart3 className="w-5 h-5" />}
+            onClick={() => setCycleFilter('due')}
+          />
+          <KpiCard
+            title="Past due"
+            value={`${dashboard.common.pastDueMembersCount || 0}`}
+            icon={<ShieldAlert className="w-5 h-5" />}
+            onClick={() => setCycleFilter('past_due')}
+          />
+        </div>
+      ) : null}
+
+      {groupType === 'TONTINE' && dashboard?.tontine ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <KpiCard
+            title="Expected pot"
+            value={formatCurrency(dashboard.tontine.expectedPot?.amount || 0, 0, currencyCode)}
+            hint={dashboard?.cycle?.cycleNumber ? `Cycle ${dashboard.cycle.cycleNumber}` : undefined}
+            icon={<Coins className="w-5 h-5" />}
+          />
+          <KpiCard
+            title="Current pot"
+            value={formatCurrency(dashboard.tontine.currentCyclePot?.amount || 0, 0, currencyCode)}
+            hint={dashboardPeriod.kind === 'range' ? `${dashboardPeriod.from} → ${dashboardPeriod.to}` : 'Current cycle'}
+            icon={<Wallet className="w-5 h-5" />}
+          />
+          <KpiCard
+            title="Next payout"
+            value={(() => {
+              const nextId = dashboard.tontine.nextPayoutMemberId;
+              const name = nextId ? group?.members?.find((m: any) => m.id === nextId)?.user?.fullName : undefined;
+              return name || '—';
+            })()}
+            hint={dashboard.tontine.nextPayoutDate ? new Date(dashboard.tontine.nextPayoutDate).toLocaleDateString() : undefined}
+            icon={<Wallet className="w-5 h-5" />}
+          />
+          <KpiCard
+            title="Queue"
+            value={`${dashboard.tontine.payoutQueueProgress?.currentPosition || 1}/${dashboard.tontine.payoutQueueProgress?.totalPositions || 0}`}
+            hint="Rotation order"
+            icon={<BarChart3 className="w-5 h-5" />}
+          />
+        </div>
+      ) : null}
+
+      {groupType === 'MICRO_SAVINGS' && dashboard?.microSavings ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <KpiCard
+            title="Net balance"
+            value={formatCurrency(dashboard.microSavings.netGroupBalance?.amount || 0, 0, currencyCode)}
+            icon={<Wallet className="w-5 h-5" />}
+          />
+          <KpiCard
+            title="Total deposits"
+            value={formatCurrency(dashboard.microSavings.totalDeposits?.amount || 0, 0, currencyCode)}
+            icon={<Coins className="w-5 h-5" />}
+          />
+          <KpiCard
+            title="Total withdrawals"
+            value={formatCurrency(dashboard.microSavings.totalWithdrawals?.amount || 0, 0, currencyCode)}
+            icon={<ShieldAlert className="w-5 h-5" />}
+          />
+          <KpiCard
+            title="Avg member balance"
+            value={formatCurrency(dashboard.microSavings.averageMemberBalance?.amount || 0, 0, currencyCode)}
+            icon={<BarChart3 className="w-5 h-5" />}
+          />
+        </div>
+      ) : null}
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-7 space-y-6">
+          {groupType === 'TONTINE' && dashboard?.cycle ? (
+            <ContributionsStatusPanel key={cycleFilter} cycle={dashboard.cycle} currencyCode={currencyCode} initialFilter={cycleFilter} />
+          ) : null}
+          {dashboard ? <DashboardInsightsPanel dashboard={dashboard} currencyCode={currencyCode} /> : null}
+        </div>
+        <div className="lg:col-span-5">
+          <RecentActivityPanel items={dashboard?.recentActivity || []} currencyCode={currencyCode} />
+        </div>
       </div>
 
-      {dashboard?.cycle && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-7">
-            <ContributionsStatusPanel key={cycleFilter} cycle={dashboard.cycle} currencyCode={currencyCode} initialFilter={cycleFilter} />
-          </div>
-          <div className="lg:col-span-5">
-            <RecentActivityPanel items={dashboard.recentActivity || []} currencyCode={currencyCode} />
-          </div>
-        </div>
-      )}
+      {dashboard?.memberStatus ? (
+        <MemberStatusTable data={dashboard.memberStatus} currencyCode={currencyCode} />
+      ) : null}
 
       {/* Tab Navigation */}
       <div className="flex space-x-4 border-b border-white/10 mb-6 overflow-x-auto no-scrollbar">

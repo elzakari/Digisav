@@ -26,8 +26,20 @@ export const groupService = {
     return response.data.data;
   },
 
-  async getGroupDashboard(groupId: string) {
-    const response = await api.get(`/groups/${groupId}/dashboard`);
+  async getGroupDashboard(
+    groupId: string,
+    params?:
+      | { period?: 'current_cycle' }
+      | { period: 'range'; from: string; to: string }
+  ) {
+    const search = new URLSearchParams();
+    if (params?.period === 'range') {
+      search.set('period', 'range');
+      search.set('from', params.from);
+      search.set('to', params.to);
+    }
+    const qs = search.toString();
+    const response = await api.get(`/groups/${groupId}/dashboard${qs ? `?${qs}` : ''}`);
     return response.data.data;
   },
 

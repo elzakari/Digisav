@@ -34,7 +34,9 @@
         "end_date": "Ọjọ́ Ìparí",
         "copy": "Daakọ",
         "copied": "Ti daakọ",
-        "copy_failed": "Kò le daakọ"
+        "copy_failed": "Kò le daakọ",
+        "show": "Fi hàn",
+        "hide": "Pamọ́"
     },
     "settings": {
         "title": "Eto Akọọlẹ",
@@ -255,6 +257,10 @@
         "audit_summary_desc": "Ìṣirò àpapọ̀ owó",
         "generate": "Mú Ìroyì Jade",
         "export_config": "Ṣètò bí o ṣe fẹ́ mú data rẹ jáde",
-        "share_whatsapp": "Pinpín nipasẹ WhatsApp"
+        "share_whatsapp": "Pinpín nipasẹ WhatsApp",
+        "preview": "Àwòkọ́",
+        "preview_failed": "Kò le gba àwòkọ́. O tún lè gba ìroyìn naa silẹ.",
+        "preview_table_title": "Tábìlì ìroyìn",
+        "no_preview": "Kò sí àwòkọ́ fún yíyan yìí."
     }
 }
