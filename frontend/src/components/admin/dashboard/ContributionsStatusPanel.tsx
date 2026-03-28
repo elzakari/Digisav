@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { AlertTriangle, CheckCircle2, Clock, XCircle } from 'lucide-react';
 import { formatCurrency } from '@/utils/currencyFormatter';
+import { useTranslation } from 'react-i18next';
 
 type CycleItemStatus = 'DUE' | 'PAID' | 'OVERDUE' | 'DEFAULTED' | 'PENDING';
 
@@ -41,14 +42,6 @@ function pillClasses(status: CycleItemStatus) {
   return 'bg-indigo-500/15 text-indigo-300 border-indigo-500/25';
 }
 
-function statusLabel(status: CycleItemStatus) {
-  if (status === 'PAID') return 'Paid';
-  if (status === 'OVERDUE') return 'Overdue';
-  if (status === 'DEFAULTED') return 'Defaulted';
-  if (status === 'PENDING') return 'Pending';
-  return 'Due';
-}
-
 function statusIcon(status: CycleItemStatus) {
   if (status === 'PAID') return <CheckCircle2 className="w-4 h-4" />;
   if (status === 'OVERDUE') return <AlertTriangle className="w-4 h-4" />;
@@ -57,6 +50,7 @@ function statusIcon(status: CycleItemStatus) {
 }
 
 export function ContributionsStatusPanel({ cycle, currencyCode, initialFilter }: ContributionsStatusPanelProps) {
+  const { t } = useTranslation();
   const [filter, setFilter] = useState<'due' | 'paid' | 'past_due'>(initialFilter || 'due');
 
   const filtered = useMemo(() => {
@@ -70,12 +64,22 @@ export function ContributionsStatusPanel({ cycle, currencyCode, initialFilter }:
     return format(d, 'MMM d, yyyy');
   }, [cycle.dueDate]);
 
+  const statusLabel = (status: CycleItemStatus) => {
+    if (status === 'PAID') return String(t('common.paid', { defaultValue: 'Paid' } as any));
+    if (status === 'OVERDUE') return String(t('common.overdue', { defaultValue: 'Overdue' } as any));
+    if (status === 'DEFAULTED') return String(t('common.defaulted', { defaultValue: 'Defaulted' } as any));
+    if (status === 'PENDING') return String(t('common.pending', { defaultValue: 'Pending' } as any));
+    return String(t('common.due', { defaultValue: 'Due' } as any));
+  };
+
   return (
     <section className="glass-card overflow-hidden">
       <div className="px-6 py-5 border-b border-white/5 flex items-center justify-between gap-4 bg-white/[0.02]">
         <div>
-          <div className="text-sm font-black text-white tracking-tight">Contributions Status</div>
-          <div className="text-xs text-slate-500 mt-1">Cycle {cycle.cycleNumber} · Due {cycleDue}</div>
+          <div className="text-sm font-black text-white tracking-tight">{String(t('admin_dashboard.contributions_status_title', { defaultValue: 'Contributions Status' } as any))}</div>
+          <div className="text-xs text-slate-500 mt-1">
+            {String(t('admin_dashboard.cycle_due', { cycle: cycle.cycleNumber, date: cycleDue, defaultValue: 'Cycle {{cycle}} · Due {{date}}' } as any))}
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
@@ -84,40 +88,42 @@ export function ContributionsStatusPanel({ cycle, currencyCode, initialFilter }:
             onClick={() => setFilter('due')}
             className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border transition-colors ${filter === 'due' ? 'bg-indigo-500/15 text-indigo-300 border-indigo-500/25' : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10'}`}
           >
-            Due
+            {String(t('common.due', { defaultValue: 'Due' } as any))}
           </button>
           <button
             type="button"
             onClick={() => setFilter('paid')}
             className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border transition-colors ${filter === 'paid' ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/25' : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10'}`}
           >
-            Paid
+            {String(t('common.paid', { defaultValue: 'Paid' } as any))}
           </button>
           <button
             type="button"
             onClick={() => setFilter('past_due')}
             className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest border transition-colors ${filter === 'past_due' ? 'bg-amber-500/15 text-amber-300 border-amber-500/25' : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10'}`}
           >
-            Past Due
+            {String(t('common.past_due', { defaultValue: 'Past due' } as any))}
           </button>
         </div>
       </div>
 
       <div className="px-6 py-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5">
-          <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Due Expected</div>
+          <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">{String(t('admin_dashboard.due_expected', { defaultValue: 'Due Expected' } as any))}</div>
           <div className="mt-2 text-lg font-black text-white tabular-nums">{formatCurrency(cycle.totals.dueExpected, 0, currencyCode)}</div>
-          <div className="mt-1 text-xs text-slate-500">{cycle.counts.DUE || 0} due</div>
+          <div className="mt-1 text-xs text-slate-500">{String(t('admin_dashboard.count_due', { count: cycle.counts.DUE || 0, defaultValue: '{{count}} due' } as any))}</div>
         </div>
         <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5">
-          <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Paid Total</div>
+          <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">{String(t('admin_dashboard.paid_total', { defaultValue: 'Paid Total' } as any))}</div>
           <div className="mt-2 text-lg font-black text-emerald-300 tabular-nums">{formatCurrency(cycle.totals.paid, 0, currencyCode)}</div>
-          <div className="mt-1 text-xs text-slate-500">{cycle.counts.PAID || 0} paid</div>
+          <div className="mt-1 text-xs text-slate-500">{String(t('admin_dashboard.count_paid', { count: cycle.counts.PAID || 0, defaultValue: '{{count}} paid' } as any))}</div>
         </div>
         <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5">
-          <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Past Due Total</div>
+          <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">{String(t('admin_dashboard.past_due_total', { defaultValue: 'Past Due Total' } as any))}</div>
           <div className="mt-2 text-lg font-black text-amber-300 tabular-nums">{formatCurrency(cycle.totals.pastDue, 0, currencyCode)}</div>
-          <div className="mt-1 text-xs text-slate-500">{(cycle.counts.OVERDUE || 0) + (cycle.counts.DEFAULTED || 0)} past due</div>
+          <div className="mt-1 text-xs text-slate-500">
+            {String(t('admin_dashboard.count_past_due', { count: (cycle.counts.OVERDUE || 0) + (cycle.counts.DEFAULTED || 0), defaultValue: '{{count}} past due' } as any))}
+          </div>
         </div>
       </div>
 
@@ -125,10 +131,10 @@ export function ContributionsStatusPanel({ cycle, currencyCode, initialFilter }:
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-white/[0.02]">
-              <th className="px-6 py-3 text-xs font-black text-slate-500 uppercase tracking-widest">Member</th>
-              <th className="px-6 py-3 text-xs font-black text-slate-500 uppercase tracking-widest">Due</th>
-              <th className="px-6 py-3 text-xs font-black text-slate-500 uppercase tracking-widest">Amount</th>
-              <th className="px-6 py-3 text-xs font-black text-slate-500 uppercase tracking-widest">Status</th>
+              <th className="px-6 py-3 text-xs font-black text-slate-500 uppercase tracking-widest">{String(t('common.member', { defaultValue: 'Member' } as any))}</th>
+              <th className="px-6 py-3 text-xs font-black text-slate-500 uppercase tracking-widest">{String(t('common.due', { defaultValue: 'Due' } as any))}</th>
+              <th className="px-6 py-3 text-xs font-black text-slate-500 uppercase tracking-widest">{String(t('common.amount', { defaultValue: 'Amount' } as any))}</th>
+              <th className="px-6 py-3 text-xs font-black text-slate-500 uppercase tracking-widest">{String(t('common.status', { defaultValue: 'Status' } as any))}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
@@ -153,9 +159,8 @@ export function ContributionsStatusPanel({ cycle, currencyCode, initialFilter }:
       </div>
 
       {filtered.length === 0 ? (
-        <div className="p-10 text-center text-slate-500 text-sm">No items for this filter.</div>
+        <div className="p-10 text-center text-slate-500 text-sm">{String(t('admin_dashboard.no_items_filter', { defaultValue: 'No items for this filter.' } as any))}</div>
       ) : null}
     </section>
   );
 }
-

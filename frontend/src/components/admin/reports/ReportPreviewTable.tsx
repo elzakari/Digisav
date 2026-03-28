@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Search, Table as TableIcon } from 'lucide-react'
 import { isProbablyNumber } from '@/components/admin/reports/reportCsv'
 
@@ -11,6 +12,7 @@ type ReportPreviewTableProps = {
 }
 
 export function ReportPreviewTable({ title, subtitle, headers, rows, isTruncated }: ReportPreviewTableProps) {
+  const { t } = useTranslation()
   const [query, setQuery] = useState('')
 
   const filteredRows = useMemo(() => {
@@ -52,7 +54,11 @@ export function ReportPreviewTable({ title, subtitle, headers, rows, isTruncated
           </div>
           {isTruncated ? (
             <div className="mt-2 text-[10px] text-slate-500">
-              Showing the first rows only. Download the full report for complete data.
+              {String(
+                t('reports.preview_truncated', {
+                  defaultValue: 'Showing the first rows only. Download the full report for complete data.',
+                } as any)
+              )}
             </div>
           ) : null}
         </div>
@@ -63,7 +69,7 @@ export function ReportPreviewTable({ title, subtitle, headers, rows, isTruncated
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search in report…"
+              placeholder={String(t('reports.search_placeholder', { defaultValue: 'Search in report…' } as any))}
               className="w-full rounded-xl border border-white/10 bg-white/5 pl-10 pr-3 py-2 text-sm text-white placeholder:text-white/35 outline-none focus:border-indigo-400/70 focus:ring-2 focus:ring-indigo-500/25"
             />
           </div>
@@ -79,7 +85,7 @@ export function ReportPreviewTable({ title, subtitle, headers, rows, isTruncated
                   key={idx}
                   className={`px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-400 whitespace-nowrap ${numericColumns.has(idx) ? 'text-right' : ''}`}
                 >
-                  {h || `Column ${idx + 1}`}
+                  {h || String(t('reports.column_fallback', { index: idx + 1, defaultValue: 'Column {{index}}' } as any))}
                 </th>
               ))}
             </tr>
@@ -88,7 +94,7 @@ export function ReportPreviewTable({ title, subtitle, headers, rows, isTruncated
             {filteredRows.length === 0 ? (
               <tr>
                 <td colSpan={headers.length} className="px-4 py-10 text-center text-sm text-slate-500">
-                  No rows match your search.
+                  {String(t('reports.no_rows_match', { defaultValue: 'No rows match your search.' } as any))}
                 </td>
               </tr>
             ) : (
@@ -114,4 +120,3 @@ export function ReportPreviewTable({ title, subtitle, headers, rows, isTruncated
     </div>
   )
 }
-

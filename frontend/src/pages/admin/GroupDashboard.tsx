@@ -202,12 +202,14 @@ export function GroupDashboard() {
           <div className="mt-2 flex flex-wrap items-center gap-2">
             {groupType ? (
               <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-white/10 bg-white/5 text-white/80">
-                {groupType === 'MICRO_SAVINGS' ? 'Micro‑Savings' : 'Tontine'}
+                {groupType === 'MICRO_SAVINGS'
+                  ? String(t('admin_dashboard.group_type_micro_savings', { defaultValue: 'Micro‑Savings' } as any))
+                  : String(t('admin_dashboard.group_type_tontine', { defaultValue: 'Tontine' } as any))}
               </span>
             ) : null}
             {dashboard?.common?.dataAsOf ? (
               <span className="text-xs text-white/50">
-                Data as of {new Date(dashboard.common.dataAsOf).toLocaleString()}
+                {String(t('admin_dashboard.data_as_of', { date: new Date(dashboard.common.dataAsOf).toLocaleString(), defaultValue: 'Data as of {{date}}' } as any))}
               </span>
             ) : null}
           </div>
@@ -532,19 +534,22 @@ export function GroupDashboard() {
                               {m.user?.fullName}
                             </div>
                             {m.isCurrentInAll ? (
-                              <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse flex-shrink-0" title="Active in all categories" />
+                              <span
+                                className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse flex-shrink-0"
+                                title={String(t('admin_dashboard.active_all_categories', { defaultValue: 'Active in all categories' } as any))}
+                              />
                             ) : null}
                           </div>
 
                           <div className="mt-2 flex flex-wrap gap-1">
                             {m.isSavingsGroupMember ? (
-                              <span className="text-[8px] font-bold uppercase text-emerald-500/80 px-1 bg-emerald-500/5 rounded">Group</span>
+                              <span className="text-[8px] font-bold uppercase text-emerald-500/80 px-1 bg-emerald-500/5 rounded">{String(t('common.group', { defaultValue: 'Group' } as any))}</span>
                             ) : null}
                             {m.isMicroSavingsMember ? (
-                              <span className="text-[8px] font-bold uppercase text-blue-500/80 px-1 bg-blue-500/5 rounded">Micro</span>
+                              <span className="text-[8px] font-bold uppercase text-blue-500/80 px-1 bg-blue-500/5 rounded">{String(t('common.micro', { defaultValue: 'Micro' } as any))}</span>
                             ) : null}
                             {m.isMicroInvestmentMember ? (
-                              <span className="text-[8px] font-bold uppercase text-amber-500/80 px-1 bg-amber-500/5 rounded">Invest</span>
+                              <span className="text-[8px] font-bold uppercase text-amber-500/80 px-1 bg-amber-500/5 rounded">{String(t('common.invest', { defaultValue: 'Invest' } as any))}</span>
                             ) : null}
                           </div>
 
@@ -689,13 +694,13 @@ export function GroupDashboard() {
                         <div className="flex items-center gap-2">
                           {m.user?.fullName}
                           {m.isCurrentInAll && (
-                            <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" title="Active in all categories"></span>
+                            <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" title={String(t('admin_dashboard.active_all_categories', { defaultValue: 'Active in all categories' } as any))}></span>
                           )}
                         </div>
                         <div className="flex gap-1 mt-1">
-                          {m.isSavingsGroupMember && <span className="text-[8px] font-bold uppercase text-emerald-500/80 px-1 bg-emerald-500/5 rounded">Group</span>}
-                          {m.isMicroSavingsMember && <span className="text-[8px] font-bold uppercase text-blue-500/80 px-1 bg-blue-500/5 rounded">Micro</span>}
-                          {m.isMicroInvestmentMember && <span className="text-[8px] font-bold uppercase text-amber-500/80 px-1 bg-amber-500/5 rounded">Invest</span>}
+                          {m.isSavingsGroupMember && <span className="text-[8px] font-bold uppercase text-emerald-500/80 px-1 bg-emerald-500/5 rounded">{String(t('common.group', { defaultValue: 'Group' } as any))}</span>}
+                          {m.isMicroSavingsMember && <span className="text-[8px] font-bold uppercase text-blue-500/80 px-1 bg-blue-500/5 rounded">{String(t('common.micro', { defaultValue: 'Micro' } as any))}</span>}
+                          {m.isMicroInvestmentMember && <span className="text-[8px] font-bold uppercase text-amber-500/80 px-1 bg-amber-500/5 rounded">{String(t('common.invest', { defaultValue: 'Invest' } as any))}</span>}
                         </div>
                       </div>
                       {(m.userId === group?.adminUserId || m.user?.role === 'ADMIN') && (

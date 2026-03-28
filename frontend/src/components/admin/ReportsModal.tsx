@@ -206,7 +206,7 @@ export function ReportsModal({ isOpen, onClose, groupId }: ReportsModalProps) {
       await navigator.clipboard.writeText(shareLink);
       toast.success(t('reports.link_copied', 'Link copied'));
     } catch {
-      toast.error(t('reports.copy_failed', 'Could not copy link'));
+      toast.error(String(t('common.copy_failed', { defaultValue: 'Could not copy link' } as any)));
     }
   };
 

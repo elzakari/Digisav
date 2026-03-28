@@ -10,6 +10,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { useTranslation } from 'react-i18next';
 import { formatCurrency } from '@/utils/currencyFormatter';
 
 type DashboardInsightsPanelProps = {
@@ -18,6 +19,7 @@ type DashboardInsightsPanelProps = {
 };
 
 export function DashboardInsightsPanel({ dashboard, currencyCode }: DashboardInsightsPanelProps) {
+  const { t } = useTranslation();
   const collectedByCycle = dashboard?.insights?.collectedByCycle || [];
   const lineData = collectedByCycle.map((d: any) => ({
     label: `C${d.cycleNumber}`,
@@ -27,22 +29,22 @@ export function DashboardInsightsPanel({ dashboard, currencyCode }: DashboardIns
   const collected = Number(dashboard?.common?.totalCollected?.amount || 0);
   const outstanding = Number(dashboard?.common?.totalOutstanding?.amount || 0);
   const pieData = [
-    { name: 'Collected', value: Math.max(0, collected) },
-    { name: 'Outstanding', value: Math.max(0, outstanding) },
+    { name: String(t('admin_dashboard.collected', { defaultValue: 'Collected' } as any)), value: Math.max(0, collected) },
+    { name: String(t('admin_dashboard.outstanding', { defaultValue: 'Outstanding' } as any)), value: Math.max(0, outstanding) },
   ];
 
   return (
     <section className="glass-card overflow-hidden">
       <div className="px-6 py-5 border-b border-white/5 flex items-center justify-between gap-4 bg-white/[0.02]">
         <div>
-          <div className="text-sm font-black text-white tracking-tight">Insights</div>
-          <div className="text-xs text-slate-500 mt-1">Collected over time and distribution</div>
+          <div className="text-sm font-black text-white tracking-tight">{String(t('admin_dashboard.insights_title', { defaultValue: 'Insights' } as any))}</div>
+          <div className="text-xs text-slate-500 mt-1">{String(t('admin_dashboard.insights_desc', { defaultValue: 'Collected over time and distribution' } as any))}</div>
         </div>
       </div>
 
       <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5">
-          <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Collected over time</div>
+          <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">{String(t('admin_dashboard.collected_over_time', { defaultValue: 'Collected over time' } as any))}</div>
           <div className="mt-4 h-44">
             {lineData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -75,13 +77,13 @@ export function DashboardInsightsPanel({ dashboard, currencyCode }: DashboardIns
                 </LineChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-full flex items-center justify-center text-sm text-slate-500">No data</div>
+              <div className="h-full flex items-center justify-center text-sm text-slate-500">{String(t('common.no_data', { defaultValue: 'No data' } as any))}</div>
             )}
           </div>
         </div>
 
         <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5">
-          <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Paid vs outstanding</div>
+          <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">{String(t('admin_dashboard.paid_vs_outstanding', { defaultValue: 'Paid vs outstanding' } as any))}</div>
           <div className="mt-4 h-44 flex items-center justify-between gap-4">
             <div className="h-44 w-44">
               <ResponsiveContainer width="100%" height="100%">
@@ -111,13 +113,13 @@ export function DashboardInsightsPanel({ dashboard, currencyCode }: DashboardIns
 
             <div className="flex-1 space-y-3">
               <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5">
-                <div className="text-[10px] font-black uppercase tracking-widest text-slate-500">Collected</div>
+                <div className="text-[10px] font-black uppercase tracking-widest text-slate-500">{String(t('admin_dashboard.collected', { defaultValue: 'Collected' } as any))}</div>
                 <div className="mt-1 text-lg font-black text-emerald-300 tabular-nums">
                   {formatCurrency(collected, 0, currencyCode)}
                 </div>
               </div>
               <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5">
-                <div className="text-[10px] font-black uppercase tracking-widest text-slate-500">Outstanding</div>
+                <div className="text-[10px] font-black uppercase tracking-widest text-slate-500">{String(t('admin_dashboard.outstanding', { defaultValue: 'Outstanding' } as any))}</div>
                 <div className="mt-1 text-lg font-black text-amber-300 tabular-nums">
                   {formatCurrency(outstanding, 0, currencyCode)}
                 </div>

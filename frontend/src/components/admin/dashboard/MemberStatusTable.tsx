@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
 import { formatCurrency } from '@/utils/currencyFormatter';
+import { useTranslation } from 'react-i18next';
 
 type TontineItem = {
   memberId: string;
@@ -46,6 +47,7 @@ function statusIcon(status: 'PAID' | 'DUE' | 'PAST_DUE') {
 }
 
 export function MemberStatusTable({ data, currencyCode }: MemberStatusTableProps) {
+  const { t } = useTranslation();
   const [filter, setFilter] = useState<'due' | 'paid' | 'past_due'>('due');
 
   const tontineItems = data.kind === 'tontine' ? data.items : null;
@@ -62,9 +64,11 @@ export function MemberStatusTable({ data, currencyCode }: MemberStatusTableProps
     <section className="glass-card overflow-hidden">
       <div className="px-6 py-5 border-b border-white/5 flex items-center justify-between gap-4 bg-white/[0.02]">
         <div>
-          <div className="text-sm font-black text-white tracking-tight">Member status</div>
+          <div className="text-sm font-black text-white tracking-tight">{String(t('admin_dashboard.member_status_title', { defaultValue: 'Member status' } as any))}</div>
           <div className="text-xs text-slate-500 mt-1">
-            {data.kind === 'tontine' ? 'Expected vs paid for the selected period' : 'Balances and flows for the selected period'}
+            {data.kind === 'tontine'
+              ? String(t('admin_dashboard.member_status_tontine_desc', { defaultValue: 'Expected vs paid for the selected period' } as any))
+              : String(t('admin_dashboard.member_status_micro_desc', { defaultValue: 'Balances and flows for the selected period' } as any))}
           </div>
         </div>
 
@@ -79,7 +83,7 @@ export function MemberStatusTable({ data, currencyCode }: MemberStatusTableProps
                   : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10'
               }`}
             >
-              Due
+              {String(t('common.due', { defaultValue: 'Due' } as any))}
             </button>
             <button
               type="button"
@@ -90,7 +94,7 @@ export function MemberStatusTable({ data, currencyCode }: MemberStatusTableProps
                   : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10'
               }`}
             >
-              Paid
+              {String(t('common.paid', { defaultValue: 'Paid' } as any))}
             </button>
             <button
               type="button"
@@ -101,7 +105,7 @@ export function MemberStatusTable({ data, currencyCode }: MemberStatusTableProps
                   : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10'
               }`}
             >
-              Past due
+              {String(t('common.past_due', { defaultValue: 'Past due' } as any))}
             </button>
           </div>
         ) : null}
@@ -112,12 +116,12 @@ export function MemberStatusTable({ data, currencyCode }: MemberStatusTableProps
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-white/[0.02]">
-                <th className="px-6 py-3 text-xs font-black text-slate-500 uppercase tracking-widest">Member</th>
-                <th className="px-6 py-3 text-xs font-black text-slate-500 uppercase tracking-widest">Expected</th>
-                <th className="px-6 py-3 text-xs font-black text-slate-500 uppercase tracking-widest">Paid</th>
-                <th className="px-6 py-3 text-xs font-black text-slate-500 uppercase tracking-widest">Outstanding</th>
-                <th className="px-6 py-3 text-xs font-black text-slate-500 uppercase tracking-widest">Last payment</th>
-                <th className="px-6 py-3 text-xs font-black text-slate-500 uppercase tracking-widest">Status</th>
+                <th className="px-6 py-3 text-xs font-black text-slate-500 uppercase tracking-widest">{String(t('common.member', { defaultValue: 'Member' } as any))}</th>
+                <th className="px-6 py-3 text-xs font-black text-slate-500 uppercase tracking-widest">{String(t('admin_dashboard.expected', { defaultValue: 'Expected' } as any))}</th>
+                <th className="px-6 py-3 text-xs font-black text-slate-500 uppercase tracking-widest">{String(t('common.paid', { defaultValue: 'Paid' } as any))}</th>
+                <th className="px-6 py-3 text-xs font-black text-slate-500 uppercase tracking-widest">{String(t('admin_dashboard.outstanding', { defaultValue: 'Outstanding' } as any))}</th>
+                <th className="px-6 py-3 text-xs font-black text-slate-500 uppercase tracking-widest">{String(t('admin_dashboard.last_payment', { defaultValue: 'Last payment' } as any))}</th>
+                <th className="px-6 py-3 text-xs font-black text-slate-500 uppercase tracking-widest">{String(t('common.status', { defaultValue: 'Status' } as any))}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
@@ -136,7 +140,11 @@ export function MemberStatusTable({ data, currencyCode }: MemberStatusTableProps
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center gap-2 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest rounded-lg border ${statusPill(it.status)}`}>
                         {statusIcon(it.status)}
-                        {it.status === 'PAID' ? 'Paid' : it.status === 'PAST_DUE' ? 'Past due' : 'Due'}
+                        {it.status === 'PAID'
+                          ? String(t('common.paid', { defaultValue: 'Paid' } as any))
+                          : it.status === 'PAST_DUE'
+                            ? String(t('common.past_due', { defaultValue: 'Past due' } as any))
+                            : String(t('common.due', { defaultValue: 'Due' } as any))}
                       </span>
                     </td>
                   </tr>
@@ -150,11 +158,11 @@ export function MemberStatusTable({ data, currencyCode }: MemberStatusTableProps
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-white/[0.02]">
-                <th className="px-6 py-3 text-xs font-black text-slate-500 uppercase tracking-widest">Member</th>
-                <th className="px-6 py-3 text-xs font-black text-slate-500 uppercase tracking-widest">Balance</th>
-                <th className="px-6 py-3 text-xs font-black text-slate-500 uppercase tracking-widest">Deposits</th>
-                <th className="px-6 py-3 text-xs font-black text-slate-500 uppercase tracking-widest">Withdrawals</th>
-                <th className="px-6 py-3 text-xs font-black text-slate-500 uppercase tracking-widest">Net</th>
+                <th className="px-6 py-3 text-xs font-black text-slate-500 uppercase tracking-widest">{String(t('common.member', { defaultValue: 'Member' } as any))}</th>
+                <th className="px-6 py-3 text-xs font-black text-slate-500 uppercase tracking-widest">{String(t('admin_dashboard.balance', { defaultValue: 'Balance' } as any))}</th>
+                <th className="px-6 py-3 text-xs font-black text-slate-500 uppercase tracking-widest">{String(t('admin_dashboard.deposits', { defaultValue: 'Deposits' } as any))}</th>
+                <th className="px-6 py-3 text-xs font-black text-slate-500 uppercase tracking-widest">{String(t('admin_dashboard.withdrawals', { defaultValue: 'Withdrawals' } as any))}</th>
+                <th className="px-6 py-3 text-xs font-black text-slate-500 uppercase tracking-widest">{String(t('admin_dashboard.net', { defaultValue: 'Net' } as any))}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
@@ -175,11 +183,11 @@ export function MemberStatusTable({ data, currencyCode }: MemberStatusTableProps
       </div>
 
       {data.kind === 'tontine' && filteredTontine.length === 0 ? (
-        <div className="p-10 text-center text-slate-500 text-sm">No members for this filter.</div>
+        <div className="p-10 text-center text-slate-500 text-sm">{String(t('admin_dashboard.no_members_filter', { defaultValue: 'No members for this filter.' } as any))}</div>
       ) : null}
 
       {data.kind === 'micro_savings' && microItems && microItems.length === 0 ? (
-        <div className="p-10 text-center text-slate-500 text-sm">No members yet.</div>
+        <div className="p-10 text-center text-slate-500 text-sm">{String(t('admin_dashboard.no_members_yet', { defaultValue: 'No members yet.' } as any))}</div>
       ) : null}
     </section>
   );

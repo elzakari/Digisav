@@ -1,4 +1,5 @@
 import { CalendarDays, CalendarRange } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export type DashboardPeriod =
   | { kind: 'current_cycle'; fallbackRange: { from: string; to: string } }
@@ -10,6 +11,7 @@ type DashboardPeriodSelectorProps = {
 };
 
 export function DashboardPeriodSelector({ value, onChange }: DashboardPeriodSelectorProps) {
+  const { t } = useTranslation();
   const fromValue = value.kind === 'range' ? value.from : value.fallbackRange.from;
   const toValue = value.kind === 'range' ? value.to : value.fallbackRange.to;
 
@@ -51,7 +53,7 @@ export function DashboardPeriodSelector({ value, onChange }: DashboardPeriodSele
           }`}
         >
           <CalendarDays className="w-4 h-4" />
-          Current cycle
+          {String(t('admin_dashboard.period_current_cycle', { defaultValue: 'Current cycle' } as any))}
         </button>
         <button
           type="button"
@@ -63,7 +65,7 @@ export function DashboardPeriodSelector({ value, onChange }: DashboardPeriodSele
           }`}
         >
           <CalendarRange className="w-4 h-4" />
-          Date range
+          {String(t('admin_dashboard.period_date_range', { defaultValue: 'Date range' } as any))}
         </button>
       </div>
 
@@ -75,7 +77,7 @@ export function DashboardPeriodSelector({ value, onChange }: DashboardPeriodSele
             onChange={(e) => setFrom(e.target.value)}
             className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 outline-none focus:border-indigo-400/70 focus:ring-2 focus:ring-indigo-500/25"
           />
-          <span className="text-xs text-white/40">to</span>
+          <span className="text-xs text-white/40">{String(t('common.to', { defaultValue: 'to' } as any))}</span>
           <input
             type="date"
             value={toValue}
@@ -87,4 +89,3 @@ export function DashboardPeriodSelector({ value, onChange }: DashboardPeriodSele
     </div>
   );
 }
-
