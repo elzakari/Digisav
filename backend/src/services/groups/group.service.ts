@@ -124,9 +124,13 @@ export class GroupService {
       throw new NotFoundError('Group');
     }
 
+    if (group.status === 'DELETED' && userRole !== 'SYS_ADMIN') {
+      throw new NotFoundError('Group');
+    }
+
     // Check access
-    const isMember = group.members.some((m) => m.userId === userId);
-    const isAdmin = group.adminUserId === userId || userRole === 'ADMIN';
+    const isMember = group.members.some((m) => m.userId === userId && m.status === 'ACTIVE');
+    const isAdmin = group.adminUserId === userId || userRole === 'SYS_ADMIN';
 
     if (!isMember && !isAdmin) {
       throw new ForbiddenError('You do not have access to this group');
@@ -144,7 +148,7 @@ export class GroupService {
       throw new NotFoundError('Group');
     }
 
-    if (group.adminUserId !== userId && userRole !== 'ADMIN') {
+    if (group.adminUserId !== userId && userRole !== 'SYS_ADMIN') {
       throw new ForbiddenError('Only group admin or system admin can update group');
     }
 
@@ -241,8 +245,12 @@ export class GroupService {
 
     if (!group) throw new NotFoundError('Group');
 
-    const isMember = group.members.some((m) => m.userId === userId);
-    const isAdmin = group.adminUserId === userId || userRole === 'ADMIN';
+    if (group.status === 'DELETED' && userRole !== 'SYS_ADMIN') {
+      throw new NotFoundError('Group');
+    }
+
+    const isMember = group.members.some((m) => m.userId === userId && m.status === 'ACTIVE');
+    const isAdmin = group.adminUserId === userId || userRole === 'SYS_ADMIN';
 
     if (!isMember && !isAdmin) {
       throw new ForbiddenError('You do not have access to this group');
@@ -273,7 +281,11 @@ export class GroupService {
 
     if (!group) throw new NotFoundError('Group');
 
-    const isAdmin = group.adminUserId === userId || userRole === 'ADMIN';
+    if (group.status === 'DELETED' && userRole !== 'SYS_ADMIN') {
+      throw new NotFoundError('Group');
+    }
+
+    const isAdmin = group.adminUserId === userId || userRole === 'SYS_ADMIN';
     if (!isAdmin) {
       throw new ForbiddenError('Only group admin or system admin can view this dashboard');
     }
@@ -654,8 +666,12 @@ export class GroupService {
       throw new NotFoundError('Group');
     }
 
-    if (group.adminUserId !== userId && userRole !== 'ADMIN') {
+    if (group.adminUserId !== userId && userRole !== 'SYS_ADMIN') {
       throw new ForbiddenError('Only group admin or system admin can delete this group');
+    }
+
+    if (group.status === 'DELETED') {
+      throw new ValidationError('Group is already deleted');
     }
 
     if (group.status === 'DRAFT') {
@@ -681,6 +697,54 @@ export class GroupService {
       });
       return { deleted: false, archived: true, group: archived };
     }
+  }
+
+  async permanentlyDeleteGroup(
+    groupId: string,
+    userId: string,
+    userRole: string,
+    confirmationText: string
+  ) {
+    const group = await prisma.group.findUnique({
+      where: { id: groupId },
+      select: {
+        id: true,
+        groupName: true,
+        status: true,
+        adminUserId: true,
+      },
+    });
+
+    if (!group) {
+      throw new NotFoundError('Group');
+    }
+
+    if (group.adminUserId !== userId && userRole !== 'SYS_ADMIN') {
+      throw new ForbiddenError('Only group admin or system admin can delete this group');
+    }
+
+    if (confirmationText !== group.groupName) {
+      throw new ValidationError('Confirmation text does not match group name');
+    }
+
+    if (group.status === 'DELETED') {
+      throw new ValidationError('Group is already deleted');
+    }
+
+    if (group.status === 'DRAFT') {
+      return this.deleteGroup(groupId, userId, userRole);
+    }
+
+    if (group.status !== 'CLOSED') {
+      throw new ValidationError('Close the group before permanent deletion');
+    }
+
+    const updated = await prisma.group.update({
+      where: { id: groupId },
+      data: { status: 'DELETED', deletedAt: new Date() },
+    });
+
+    return { deleted: true, group: updated };
   }
 
   async activateGroup(groupId: string, userId: string, userRole: string) {
@@ -731,12 +795,14 @@ export class GroupService {
   async getUserGroups(userId: string) {
     return prisma.group.findMany({
       where: {
+        status: { not: 'DELETED' },
         OR: [
           { adminUserId: userId },
           {
             members: {
               some: {
                 userId: userId,
+                status: 'ACTIVE',
               },
             },
           },

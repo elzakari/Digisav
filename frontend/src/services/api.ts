@@ -33,12 +33,16 @@ api.interceptors.response.use(
     (response) => response,
     async (error) => {
         const originalRequest = error.config;
-        if (error.response?.status === 401 && !originalRequest._retry) {
+        const url = String(originalRequest?.url || '');
+        const isRefreshCall = url.includes('/auth/refresh');
+
+        if (error.response?.status === 401 && !originalRequest._retry && !isRefreshCall) {
             originalRequest._retry = true;
             try {
                 const refreshResponse = await refreshClient.post('/auth/refresh');
                 const newAccessToken = refreshResponse.data.data.accessToken;
                 useAuthStore.getState().setAccessToken(newAccessToken);
+                originalRequest.headers = originalRequest.headers || {};
                 originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
                 return api(originalRequest);
             } catch {

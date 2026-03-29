@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { contributionService } from '@/services/contribution.service';
 import { useTranslation } from 'react-i18next';
+import { publishAppEvent } from '@/lib/appEvents';
 
 interface RecordContributionModalProps {
     groupId: string;
@@ -29,6 +30,10 @@ export function RecordContributionModal({ groupId, members, currencyCode, isOpen
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['group-contributions', groupId] });
             queryClient.invalidateQueries({ queryKey: ['group-stats', groupId] });
+            queryClient.invalidateQueries({ queryKey: ['group-transactions', groupId] });
+            queryClient.invalidateQueries({ queryKey: ['group', groupId] });
+            queryClient.invalidateQueries({ queryKey: ['group-dashboard', groupId] });
+            publishAppEvent({ type: 'group_recordings_changed', groupId });
             onClose();
         },
     });
@@ -37,10 +42,18 @@ export function RecordContributionModal({ groupId, members, currencyCode, isOpen
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        const paymentMethod =
+            formData.paymentMethod === 'MPESA'
+                ? 'MOBILE_MONEY'
+                : formData.paymentMethod === 'BANK'
+                  ? 'BANK_TRANSFER'
+                  : formData.paymentMethod;
+
         mutation.mutate({
             ...formData,
             amount: parseFloat(formData.amount),
             currencyCode,
+            paymentMethod,
             paymentDate: new Date(formData.paymentDate).toISOString(),
         });
     };

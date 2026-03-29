@@ -87,8 +87,8 @@ export function InvestmentDashboard() {
         <div className="lg:col-span-2 glass-card p-8 flex flex-col justify-center space-y-6">
           <div className="space-y-1">
             <p className="text-sm font-bold uppercase tracking-widest text-slate-400">{t('investments.total_portfolio_value')}</p>
-            <div className="flex items-baseline gap-4">
-              <h1 className="text-5xl font-black text-white tracking-tighter">
+            <div className="flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-4">
+              <h1 className="text-4xl sm:text-5xl font-black text-white tracking-tighter">
                 {formatCurrency(portfolio?.totalValue || 0)}
               </h1>
               <div className={`flex items-center gap-1 font-bold ${Number(portfolio?.totalGainLoss || 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
@@ -98,7 +98,7 @@ export function InvestmentDashboard() {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4 pt-4 border-t border-white/5">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-white/5">
             <div>
               <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-1">{t('investments.cash_balance')}</p>
               <p className="text-lg font-bold text-white">{formatCurrency(portfolio?.cashBalance || 0)}</p>

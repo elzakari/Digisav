@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { groupService } from '@/services/group.service';
 import { RecordContributionModal } from '@/components/admin/RecordContributionModal';
 import { RecordPayoutModal } from '@/components/admin/RecordPayoutModal';
+import { EditRecordModal } from '@/components/admin/EditRecordModal';
 import { transactionService } from '@/services/transaction.service';
 import { authService } from '@/services/auth.service';
 import { EditGroupModal } from '@/components/admin/EditGroupModal';
@@ -55,12 +56,18 @@ export function GroupDashboard() {
           : { period: 'current_cycle' }
       ),
     enabled: !!groupId,
+    refetchOnWindowFocus: 'always',
+    refetchOnReconnect: true,
+    refetchInterval: 15_000,
   });
 
   const { data: group, isLoading: groupLoading } = useQuery({
     queryKey: ['group', groupId],
     queryFn: () => groupService.getGroupById(groupId!),
     enabled: !!groupId,
+    refetchOnWindowFocus: 'always',
+    refetchOnReconnect: true,
+    refetchInterval: 30_000,
   });
 
   useEffect(() => {
@@ -77,6 +84,9 @@ export function GroupDashboard() {
     queryKey: ['group-transactions', groupId],
     queryFn: () => transactionService.getGroupTransactions(groupId!),
     enabled: !!groupId,
+    refetchOnWindowFocus: 'always',
+    refetchOnReconnect: true,
+    refetchInterval: 15_000,
   });
 
   const [isContributionModalOpen, setIsContributionModalOpen] = useState(false);
@@ -87,6 +97,7 @@ export function GroupDashboard() {
   const [isEditMemberModalOpen, setIsEditMemberModalOpen] = useState(false);
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<any>(null);
+  const [editingTransaction, setEditingTransaction] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<'transactions' | 'members' | 'requests'>('transactions');
   const [memberMenuOpenId, setMemberMenuOpenId] = useState<string | null>(null);
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
@@ -200,6 +211,11 @@ export function GroupDashboard() {
           </div>
           <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">{t('dashboard.title')}</h1>
           <div className="mt-2 flex flex-wrap items-center gap-2">
+            {group?.groupPrefix ? (
+              <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-indigo-500/20 bg-indigo-500/10 text-indigo-200">
+                {group.groupPrefix}
+              </span>
+            ) : null}
             {groupType ? (
               <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-white/10 bg-white/5 text-white/80">
                 {groupType === 'MICRO_SAVINGS'
@@ -428,6 +444,14 @@ export function GroupDashboard() {
                         {c.transactionType === 'PAYOUT' ? t('common.payout') : t('common.completed')}
                       </span>
                     </div>
+                    {(c.transactionType === 'PAYOUT' || c.transactionType === 'CONTRIBUTION') && (
+                      <button
+                        onClick={() => setEditingTransaction(c)}
+                        className="mt-3 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all bg-white/5 hover:bg-white/10 border border-white/10 text-slate-200"
+                      >
+                        {String(t('common.edit', { defaultValue: 'Edit' } as any))}
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -443,6 +467,9 @@ export function GroupDashboard() {
                   <th className="px-6 md:px-8 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">{t('common.amount')}</th>
                   <th className="px-6 md:px-8 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">{t('common.method')}</th>
                   <th className="px-6 md:px-8 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest">{t('common.status')}</th>
+                  <th className="px-6 md:px-8 py-4 text-xs font-bold text-slate-400 uppercase tracking-widest text-right">
+                    {String(t('common.actions', { defaultValue: 'Actions' } as any))}
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
@@ -473,6 +500,18 @@ export function GroupDashboard() {
                       <span className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg ${c.transactionType === 'PAYOUT' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'}`}>
                         {c.transactionType === 'PAYOUT' ? t('common.payout') : t('common.completed')}
                       </span>
+                    </td>
+                    <td className="px-6 md:px-8 py-5 text-right">
+                      {(c.transactionType === 'PAYOUT' || c.transactionType === 'CONTRIBUTION') ? (
+                        <button
+                          onClick={() => setEditingTransaction(c)}
+                          className="px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all bg-white/5 hover:bg-white/10 border border-white/10 text-slate-200"
+                        >
+                          {String(t('common.edit', { defaultValue: 'Edit' } as any))}
+                        </button>
+                      ) : (
+                        <span className="text-xs text-slate-500">—</span>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -845,6 +884,15 @@ export function GroupDashboard() {
         isOpen={isNotificationModalOpen}
         onClose={() => setIsNotificationModalOpen(false)}
       />
+
+      {editingTransaction ? (
+        <EditRecordModal
+          groupId={groupId!}
+          transaction={editingTransaction}
+          isOpen={!!editingTransaction}
+          onClose={() => setEditingTransaction(null)}
+        />
+      ) : null}
 
       {/* Bulk Action Bar */}
       {selectedMemberIds.length > 0 && (

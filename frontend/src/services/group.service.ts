@@ -73,6 +73,13 @@ export const groupService = {
     return response.data.data;
   },
 
+  async permanentlyDeleteGroup(groupId: string, confirmationText: string) {
+    const response = await api.delete(`/groups/${groupId}/permanent`, {
+      data: { confirmationText },
+    });
+    return response.data.data;
+  },
+
   async suspendMember(memberId: string) {
     const response = await api.patch(`/members/${memberId}/suspend`);
     return response.data.data;
@@ -115,6 +122,11 @@ export const groupService = {
 
   async joinGroup(token: string) {
     const response = await api.post(`/invitations/${token}/join`);
+    return response.data.data;
+  },
+
+  async requestJoinByCode(payload: { groupCode: string; nationalId: string; dateOfBirth?: string }) {
+    const response = await api.post('/groups/join-requests', payload);
     return response.data.data;
   },
 

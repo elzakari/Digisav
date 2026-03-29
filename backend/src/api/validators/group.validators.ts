@@ -48,3 +48,9 @@ export const updateGroupSchema = z.object({
     gracePeriodDays: z.number().int().min(0).max(30).optional(),
   }),
 });
+
+export const permanentDeleteGroupSchema = z.object({
+  body: z.object({
+    confirmationText: z.string().min(1),
+  }),
+});

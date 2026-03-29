@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { transactionService } from '@/services/transaction.service';
 import { useTranslation } from 'react-i18next';
+import { publishAppEvent } from '@/lib/appEvents';
 
 interface RecordPayoutModalProps {
     groupId: string;
@@ -28,6 +29,9 @@ export function RecordPayoutModal({ groupId, members, currencyCode, isOpen, onCl
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['group-transactions', groupId] });
             queryClient.invalidateQueries({ queryKey: ['group-stats', groupId] });
+            queryClient.invalidateQueries({ queryKey: ['group', groupId] });
+            queryClient.invalidateQueries({ queryKey: ['group-dashboard', groupId] });
+            publishAppEvent({ type: 'group_recordings_changed', groupId });
             onClose();
         },
     });

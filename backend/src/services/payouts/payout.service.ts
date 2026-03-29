@@ -1,7 +1,7 @@
 import { TransactionType } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { LedgerService } from '@/services/ledger/ledger.service';
-import { NotFoundError } from '@/utils/errors';
+import { NotFoundError, ValidationError, ForbiddenError } from '@/utils/errors';
 import { NotificationService } from '@/services/notifications/notification.service';
 
 interface RecordPayoutData {
@@ -13,6 +13,18 @@ interface RecordPayoutData {
     referenceNumber?: string;
     notes?: string;
     recordedBy: string;
+}
+
+interface AdjustPayoutData {
+    groupId: string;
+    transactionId: string;
+    recordedBy: string;
+    userRole: string;
+    amount?: number;
+    paymentMethod?: string;
+    referenceNumber?: string | null;
+    notes?: string | null;
+    paymentDate?: Date;
 }
 
 export class PayoutService {
@@ -57,6 +69,64 @@ export class PayoutService {
         } catch (err) {
             console.error('Failed to send payout notification', err);
         }
+
+        return transaction;
+    }
+
+    async adjustPayout(data: AdjustPayoutData) {
+        const tx = await prisma.transaction.findUnique({
+            where: { id: data.transactionId },
+        });
+
+        if (!tx || tx.groupId !== data.groupId || tx.transactionType !== TransactionType.PAYOUT) {
+            throw new NotFoundError('Payout transaction');
+        }
+
+        const group = await prisma.group.findUnique({ where: { id: data.groupId } });
+        if (!group) throw new NotFoundError('Group');
+
+        const canEdit = group.adminUserId === data.recordedBy || data.userRole === 'SYS_ADMIN' || data.userRole === 'ADMIN';
+        if (!canEdit) throw new ForbiddenError('Only group admin or system admin can adjust payouts');
+
+        const oldMeta = (tx.metadata || {}) as any;
+
+        const nextAmount = data.amount !== undefined ? data.amount : Number(tx.amount);
+        const nextPaymentMethod = data.paymentMethod !== undefined ? data.paymentMethod : oldMeta.paymentMethod;
+        const nextReferenceNumber = data.referenceNumber !== undefined ? data.referenceNumber : oldMeta.referenceNumber;
+        const nextNotes = data.notes !== undefined ? data.notes : oldMeta.notes;
+        const nextPaymentDate = data.paymentDate ?? undefined;
+
+        if (nextAmount <= 0) throw new ValidationError('Amount must be positive');
+
+        const delta = Number(nextAmount) - Number(tx.amount);
+
+        const transaction = await this.ledgerService.createTransaction({
+            groupId: tx.groupId,
+            memberId: tx.memberId || undefined,
+            transactionType: TransactionType.ADJUSTMENT,
+            amount: delta,
+            currencyCode: tx.currencyCode,
+            referenceId: tx.id,
+            recordedBy: data.recordedBy,
+            metadata: {
+                type: 'PAYOUT_EDIT',
+                adjustsTransactionId: tx.id,
+                old: {
+                    amount: Number(tx.amount),
+                    paymentMethod: oldMeta.paymentMethod,
+                    referenceNumber: oldMeta.referenceNumber,
+                    notes: oldMeta.notes,
+                    timestamp: tx.timestamp,
+                },
+                new: {
+                    amount: Number(nextAmount),
+                    paymentMethod: nextPaymentMethod,
+                    referenceNumber: nextReferenceNumber,
+                    notes: nextNotes,
+                    ...(nextPaymentDate ? { paymentDate: nextPaymentDate } : {}),
+                },
+            },
+        });
 
         return transaction;
     }

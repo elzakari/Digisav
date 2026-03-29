@@ -1,10 +1,12 @@
 import React from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { NotificationBell } from '@/components/common/NotificationBell';
 import { authService } from '@/services/auth.service';
 import { useTranslation } from 'react-i18next';
 import { LanguageSwitcher } from '@/components/common/LanguageSwitcher';
 import { LogOut, Menu, X } from 'lucide-react';
+import { SafeLink } from '@/components/common/SafeLink';
+import { useProductNavStore } from '@/store/productNav.store';
 
 interface MainLayoutProps {
     children: React.ReactNode;
@@ -16,6 +18,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     const { t, i18n: i18nInstance } = useTranslation();
     const user = authService.getCurrentUser();
     const [mobileNavOpen, setMobileNavOpen] = React.useState(false);
+    const product = useProductNavStore((s) => s.product);
+    const setProduct = useProductNavStore((s) => s.setProduct);
  
     React.useEffect(() => {
         if (user?.theme) {
@@ -30,6 +34,17 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     React.useEffect(() => {
         setMobileNavOpen(false);
     }, [location.pathname]);
+
+    React.useEffect(() => {
+        const p = location.pathname;
+        if (p.startsWith('/savings') || p.startsWith('/investments') || p.startsWith('/micro-savings')) {
+            setProduct('micro');
+            return;
+        }
+        if (p.startsWith('/group-savings') || p.startsWith('/admin') || p.startsWith('/member') || p.startsWith('/join') || p.startsWith('/overview')) {
+            setProduct('group');
+        }
+    }, [location.pathname, setProduct]);
 
     React.useEffect(() => {
         if (!mobileNavOpen) return;
@@ -52,20 +67,6 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
         const items: Array<{ to: string; label: string; active: (path: string) => boolean }> = [];
 
-        if (user.role === 'MEMBER') {
-            items.push({
-                to: '/overview',
-                label: 'Overview',
-                active: (p) => p === '/overview',
-            });
-        }
-
-        items.push({
-            to: user.role === 'SYS_ADMIN' ? '/sysadmin/dashboard' : user.role === 'ADMIN' ? '/admin/dashboard' : '/member/dashboard',
-            label: t('common.dashboard'),
-            active: (p) => p.includes('/dashboard'),
-        });
-
         if (user.role === 'SYS_ADMIN') {
             items.push({
                 to: '/sysadmin/users',
@@ -78,21 +79,46 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 active: (p) => p.includes('/sysadmin/groups'),
             });
         } else {
-            items.push({
-                to: user.role === 'ADMIN' ? '/admin/calendar' : '/member/calendar',
-                label: t('common.calendar'),
-                active: (p) => p.includes('/calendar'),
-            });
-            items.push({
-                to: '/savings',
-                label: 'Savings',
-                active: (p) => p.includes('/savings'),
-            });
-            items.push({
-                to: '/investments',
-                label: 'Investments',
-                active: (p) => p.includes('/investments'),
-            });
+            if (product === 'group') {
+                if (user.role === 'MEMBER') {
+                    items.push({
+                        to: '/overview',
+                        label: 'Overview',
+                        active: (p) => p === '/overview',
+                    });
+                }
+
+                items.push({
+                    to: user.role === 'ADMIN' ? '/admin/dashboard' : '/member/dashboard',
+                    label: t('common.dashboard'),
+                    active: (p) => p.includes('/dashboard') && !p.includes('/sysadmin'),
+                });
+
+                items.push({
+                    to: user.role === 'ADMIN' ? '/admin/calendar' : '/member/calendar',
+                    label: t('common.calendar'),
+                    active: (p) => p.includes('/calendar'),
+                });
+
+                if (user.role === 'ADMIN') {
+                    items.push({
+                        to: '/admin/groups/audit',
+                        label: 'Audit',
+                        active: (p) => p.includes('/admin/groups/audit'),
+                    });
+                }
+            } else {
+                items.push({
+                    to: '/savings',
+                    label: 'Savings',
+                    active: (p) => p.includes('/savings'),
+                });
+                items.push({
+                    to: '/investments',
+                    label: 'Investments',
+                    active: (p) => p.includes('/investments'),
+                });
+            }
         }
 
         items.push({
@@ -102,7 +128,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         });
 
         return items;
-    }, [t, user]);
+    }, [product, t, user]);
+
+    const canSwitchProduct = !!user && user.role !== 'SYS_ADMIN';
 
     return (
         <div className="min-h-screen w-full relative overflow-x-hidden flex flex-col">
@@ -123,19 +151,51 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                                 <Menu className="w-5 h-5" />
                             </button>
 
-                            <Link to={user.role === 'SYS_ADMIN' ? '/sysadmin/dashboard' : user.role === 'ADMIN' ? '/admin/dashboard' : '/overview'} className="text-xl font-black text-white tracking-tight">
+                            <SafeLink to={user.role === 'SYS_ADMIN' ? '/sysadmin/dashboard' : user.role === 'ADMIN' ? '/admin/dashboard' : '/overview'} className="text-xl font-black text-white tracking-tight" auditLabel="Brand">
                                 Germ<span className="text-indigo-400">inos</span>
-                            </Link>
+                            </SafeLink>
+
+                            {canSwitchProduct && (
+                                <div className="hidden md:flex items-center p-1 rounded-2xl bg-white/[0.03] border border-white/10">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setProduct('group');
+                                            navigate('/group-savings');
+                                        }}
+                                        className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors ${product === 'group'
+                                            ? 'bg-indigo-500/20 text-white'
+                                            : 'text-slate-400 hover:text-white'
+                                            }`}
+                                    >
+                                        Group
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setProduct('micro');
+                                            navigate('/micro-savings');
+                                        }}
+                                        className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors ${product === 'micro'
+                                            ? 'bg-emerald-500/20 text-white'
+                                            : 'text-slate-400 hover:text-white'
+                                            }`}
+                                    >
+                                        Micro
+                                    </button>
+                                </div>
+                            )}
 
                             <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
                                 {navItems.map((it) => (
-                                    <Link
+                                    <SafeLink
                                         key={it.to}
                                         to={it.to}
+                                        auditLabel={`Nav:${it.label}`}
                                         className={`transition-colors hover:text-white ${it.active(location.pathname) ? 'text-white' : 'text-slate-400'}`}
                                     >
                                         {it.label}
-                                    </Link>
+                                    </SafeLink>
                                 ))}
                             </nav>
                         </div>
@@ -175,12 +235,13 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                         aria-label="Navigation"
                     >
                         <div className="h-16 px-4 flex items-center justify-between border-b border-white/10">
-                            <Link
+                            <SafeLink
                                 to={user.role === 'SYS_ADMIN' ? '/sysadmin/dashboard' : user.role === 'ADMIN' ? '/admin/dashboard' : '/overview'}
                                 className="text-lg font-black text-white tracking-tight"
+                                auditLabel="Brand"
                             >
                                 Germ<span className="text-indigo-400">inos</span>
-                            </Link>
+                            </SafeLink>
                             <button
                                 type="button"
                                 className="p-2 rounded-xl text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
@@ -192,17 +253,48 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                         </div>
 
                         <div className="p-4 space-y-2">
+                            {canSwitchProduct && (
+                                <div className="p-2 rounded-2xl bg-white/[0.02] border border-white/10 flex items-center justify-between">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setProduct('group');
+                                            navigate('/group-savings');
+                                        }}
+                                        className={`flex-1 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors ${product === 'group'
+                                            ? 'bg-indigo-500/20 text-white'
+                                            : 'text-slate-400'
+                                            }`}
+                                    >
+                                        Group
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setProduct('micro');
+                                            navigate('/micro-savings');
+                                        }}
+                                        className={`flex-1 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors ${product === 'micro'
+                                            ? 'bg-emerald-500/20 text-white'
+                                            : 'text-slate-400'
+                                            }`}
+                                    >
+                                        Micro
+                                    </button>
+                                </div>
+                            )}
                             {navItems.map((it) => (
-                                <Link
+                                <SafeLink
                                     key={it.to}
                                     to={it.to}
+                                    auditLabel={`Nav:${it.label}`}
                                     className={`block w-full px-4 py-3 rounded-2xl text-sm font-semibold transition-colors border ${it.active(location.pathname)
                                         ? 'bg-indigo-500/15 text-white border-indigo-500/25'
                                         : 'bg-white/[0.02] text-slate-300 border-white/10 hover:bg-white/[0.04]'
                                         }`}
                                 >
                                     {it.label}
-                                </Link>
+                                </SafeLink>
                             ))}
                         </div>
 

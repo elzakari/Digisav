@@ -4,6 +4,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { groupService } from '@/services/group.service';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '@/store/auth.store';
+import { toast } from 'react-hot-toast';
 
 export function JoinGroupPage() {
     const { t } = useTranslation();
@@ -11,6 +12,12 @@ export function JoinGroupPage() {
     const token = searchParams.get('token');
     const navigate = useNavigate();
     const [error, setError] = useState('');
+
+    const [requestForm, setRequestForm] = useState({
+        groupCode: '',
+        nationalId: '',
+        dateOfBirth: '',
+    });
 
     const isLoggedIn = !!useAuthStore((s) => s.user);
 
@@ -32,6 +39,23 @@ export function JoinGroupPage() {
         }
     });
 
+    const requestJoinMutation = useMutation({
+        mutationFn: () =>
+            groupService.requestJoinByCode({
+                groupCode: requestForm.groupCode,
+                nationalId: requestForm.nationalId,
+                ...(requestForm.dateOfBirth ? { dateOfBirth: requestForm.dateOfBirth } : {}),
+            }),
+        onSuccess: () => {
+            toast.success(String(t('join.request_sent', { defaultValue: 'Request sent. Wait for the admin to approve.' } as any)));
+            navigate('/member/dashboard');
+        },
+        onError: (err: any) => {
+            const msg = err?.response?.data?.error?.message || err?.response?.data?.message;
+            toast.error(msg || String(t('auth.something_wrong')));
+        },
+    });
+
     const handleAcceptInvitation = () => {
         if (!isLoggedIn) {
             // Store target join link in session storage to redirect back after login
@@ -49,7 +73,7 @@ export function JoinGroupPage() {
         </div>
     );
 
-    if (!group || error) {
+    if (token && (!group || error)) {
         return (
             <div className="w-full max-w-md animate-fade-in-up">
                 <div className="glass-card p-10 text-center space-y-6">
@@ -68,6 +92,82 @@ export function JoinGroupPage() {
                     >
                         {t('common.return_to_dashboard')}
                     </button>
+                </div>
+            </div>
+        );
+    }
+
+    if (!token) {
+        return (
+            <div className="w-full max-w-md animate-fade-in-up">
+                <div className="glass-card p-8 md:p-10 space-y-8">
+                    <div className="text-center space-y-3">
+                        <span className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] bg-indigo-500/10 px-3 py-1 rounded-md border border-indigo-500/20">
+                            {String(t('join.request_to_join', { defaultValue: 'Request to join' } as any))}
+                        </span>
+                        <h2 className="text-3xl font-bold text-white tracking-tight">{String(t('join.request_join_title', { defaultValue: 'Join a group' } as any))}</h2>
+                        <p className="text-slate-400 text-sm">{String(t('join.request_join_desc', { defaultValue: 'Send a request to the group admin. You will be added after approval.' } as any))}</p>
+                    </div>
+
+                    <form
+                        onSubmit={(e) => {
+                            e.preventDefault();
+                            if (!isLoggedIn) {
+                                sessionStorage.setItem('redirectAfterLogin', window.location.pathname + window.location.search);
+                                navigate('/login');
+                                return;
+                            }
+                            requestJoinMutation.mutate();
+                        }}
+                        className="space-y-5"
+                    >
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">{String(t('join.group_code', { defaultValue: 'Group code' } as any))}</label>
+                            <input
+                                required
+                                value={requestForm.groupCode}
+                                onChange={(e) => setRequestForm((p) => ({ ...p, groupCode: e.target.value }))}
+                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-indigo-500/50 transition-all"
+                                placeholder={String(t('join.group_code_placeholder', { defaultValue: 'e.g. ABC123' } as any))}
+                            />
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">{String(t('join.national_id', { defaultValue: 'National ID' } as any))}</label>
+                            <input
+                                required
+                                value={requestForm.nationalId}
+                                onChange={(e) => setRequestForm((p) => ({ ...p, nationalId: e.target.value }))}
+                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-indigo-500/50 transition-all"
+                                placeholder={String(t('join.national_id_placeholder', { defaultValue: 'Your ID number' } as any))}
+                            />
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">{String(t('join.date_of_birth_optional', { defaultValue: 'Date of birth (optional)' } as any))}</label>
+                            <input
+                                type="date"
+                                value={requestForm.dateOfBirth}
+                                onChange={(e) => setRequestForm((p) => ({ ...p, dateOfBirth: e.target.value }))}
+                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-indigo-500/50 transition-all [color-scheme:dark]"
+                            />
+                        </div>
+
+                        <button
+                            disabled={requestJoinMutation.isPending}
+                            className="w-full glass-button btn-primary py-4 disabled:opacity-50 flex items-center justify-center gap-2"
+                            type="submit"
+                        >
+                            {requestJoinMutation.isPending ? (
+                                <>
+                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    {String(t('common.processing', { defaultValue: 'Processing...' } as any))}
+                                </>
+                            ) : (
+                                String(t('join.send_request', { defaultValue: 'Send request' } as any))
+                            )}
+                        </button>
+                    </form>
                 </div>
             </div>
         );

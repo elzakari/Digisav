@@ -7,6 +7,7 @@ import { contributionService } from '@/services/contribution.service';
 import { authService } from '@/services/auth.service';
 import { formatCurrency } from '@/utils/currencyFormatter';
 import { savingsService } from '@/services/savings.service';
+import { toast } from 'react-hot-toast';
 
 export function MemberGroupDashboard() {
     const { t } = useTranslation();
@@ -15,22 +16,39 @@ export function MemberGroupDashboard() {
     const currentUser = authService.getCurrentUser();
     const queryClient = useQueryClient();
 
-    const { data: group, isLoading: groupLoading } = useQuery({
+    const {
+        data: group,
+        isLoading: groupLoading,
+        isError: groupIsError,
+        error: groupError,
+    } = useQuery({
         queryKey: ['group', groupId],
         queryFn: () => groupService.getGroupById(groupId!),
         enabled: !!groupId,
+        retry: false,
+        refetchOnWindowFocus: 'always',
+        refetchOnReconnect: true,
+        refetchInterval: 30_000,
     });
 
     const { data: stats, isLoading: statsLoading } = useQuery({
         queryKey: ['group-stats', groupId],
         queryFn: () => contributionService.getGroupStats(groupId!),
-        enabled: !!groupId,
+        enabled: !!groupId && !!group,
+        retry: false,
+        refetchOnWindowFocus: 'always',
+        refetchOnReconnect: true,
+        refetchInterval: 15_000,
     });
 
     const { data: contributions, isLoading: historyLoading } = useQuery({
         queryKey: ['group-contributions', groupId],
         queryFn: () => contributionService.getContributionHistory(groupId!),
-        enabled: !!groupId,
+        enabled: !!groupId && !!group,
+        retry: false,
+        refetchOnWindowFocus: 'always',
+        refetchOnReconnect: true,
+        refetchInterval: 15_000,
     });
 
     const withdrawalMutation = useMutation({
@@ -50,10 +68,18 @@ export function MemberGroupDashboard() {
     const myTotalContributions = myContributions.reduce((sum: number, c: any) => sum + Number(c.amount), 0);
 
     useEffect(() => {
-        if (!groupLoading && !group) {
-            navigate('/overview');
-        }
-    }, [group, groupLoading, navigate]);
+        if (!groupIsError) return;
+        const status = (groupError as any)?.response?.status;
+        const backendMsg = (groupError as any)?.response?.data?.error?.message || (groupError as any)?.response?.data?.message;
+        const msg =
+            backendMsg ||
+            (status === 403
+                ? t('common.forbidden', { defaultValue: 'You no longer have access to this group.' } as any)
+                : t('common.not_found', { defaultValue: 'This group is no longer available.' } as any));
+
+        toast.error(String(msg));
+        navigate('/member/dashboard');
+    }, [groupError, groupIsError, navigate, t]);
 
     if (groupLoading || statsLoading || historyLoading) return (
         <div className="flex items-center justify-center min-h-[60vh]">
@@ -70,6 +96,11 @@ export function MemberGroupDashboard() {
                         <Link to="/member/dashboard" className="hover:text-indigo-300 transition-colors">{t('common.member')}</Link>
                         <span>/</span>
                         <span className="text-slate-400">{group?.groupName}</span>
+                        {group?.groupPrefix ? (
+                            <span className="ml-2 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border border-indigo-500/20 bg-indigo-500/10 text-indigo-200">
+                                {group.groupPrefix}
+                            </span>
+                        ) : null}
                     </div>
                     <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">{t('dashboard.members_payout')}</h1>
                 </div>

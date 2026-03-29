@@ -11,6 +11,9 @@ const controller = new MemberController();
 // Register a member to a group
 router.post('/groups/:groupId/members', authenticate, controller.registerMember.bind(controller));
 
+// Request to join a group by code (member -> admin approval)
+router.post('/groups/join-requests', authenticate, controller.requestJoinByCode.bind(controller));
+
 // Get all members of a group
 router.get('/groups/:groupId/members', authenticate, requireGroupMember, controller.getGroupMembers.bind(controller));
 

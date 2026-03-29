@@ -15,5 +15,6 @@ router.patch('/users/:userId', sysAdminController.updateUser);
 router.post('/users/:userId/reset-password', sysAdminController.resetAdminPassword);
 router.delete('/users/:userId', sysAdminController.deleteUser);
 router.patch('/groups/:groupId', sysAdminController.updateGroupStatus);
+router.delete('/groups/:groupId', sysAdminController.hardDeleteGroup);
 
 export default router;

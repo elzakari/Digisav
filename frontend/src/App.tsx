@@ -23,6 +23,10 @@ import { UnifiedDashboard } from '@/pages/dashboard/UnifiedDashboard';
 import { SettingsPage } from '@/pages/settings/SettingsPage';
 import { Toaster } from 'react-hot-toast';
 import { authService } from '@/services/auth.service'
+import { RouteAuditPage } from '@/pages/admin/RouteAuditPage'
+import { GroupSavingsHome } from '@/pages/group-savings/GroupSavingsHome'
+import { MicroSavingsHome } from '@/pages/micro-savings/MicroSavingsHome'
+import { PermanentDeleteGroupPage } from '@/pages/admin/PermanentDeleteGroupPage'
 
 function App() {
   const [ready, setReady] = useState(false)
@@ -51,7 +55,9 @@ function App() {
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/admin/calendar" element={<CalendarPage />} />
             <Route path="/admin/groups/create" element={<CreateGroupPage />} />
+            <Route path="/admin/groups/audit" element={<RouteAuditPage />} />
             <Route path="/admin/groups/:groupId" element={<GroupDashboard />} />
+            <Route path="/admin/groups/:groupId/delete" element={<PermanentDeleteGroupPage />} />
 
             <Route path="/overview" element={<UnifiedDashboard />} />
             <Route path="/member/dashboard" element={<MemberDashboard />} />
@@ -66,6 +72,8 @@ function App() {
             <Route path="/savings/create" element={<CreateGoalPage />} />
 
             <Route path="/investments" element={<InvestmentDashboard />} />
+            <Route path="/group-savings" element={<GroupSavingsHome />} />
+            <Route path="/micro-savings" element={<MicroSavingsHome />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Route>
         </Route>

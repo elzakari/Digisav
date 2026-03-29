@@ -37,6 +37,9 @@ export function CreateGoalPage() {
   const { data: groups, isLoading: isGroupsLoading } = useQuery({
     queryKey: ['my-groups'],
     queryFn: () => groupService.getMyGroups(),
+    refetchOnWindowFocus: 'always',
+    refetchOnReconnect: true,
+    refetchInterval: 60_000,
   });
 
   const createGoalMutation = useMutation({

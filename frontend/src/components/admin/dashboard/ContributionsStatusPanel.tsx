@@ -74,15 +74,15 @@ export function ContributionsStatusPanel({ cycle, currencyCode, initialFilter }:
 
   return (
     <section className="glass-card overflow-hidden">
-      <div className="px-6 py-5 border-b border-white/5 flex items-center justify-between gap-4 bg-white/[0.02]">
-        <div>
+      <div className="px-4 sm:px-6 py-5 border-b border-white/5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white/[0.02]">
+        <div className="min-w-0">
           <div className="text-sm font-black text-white tracking-tight">{String(t('admin_dashboard.contributions_status_title', { defaultValue: 'Contributions Status' } as any))}</div>
           <div className="text-xs text-slate-500 mt-1">
             {String(t('admin_dashboard.cycle_due', { cycle: cycle.cycleNumber, date: cycleDue, defaultValue: 'Cycle {{cycle}} · Due {{date}}' } as any))}
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             type="button"
             onClick={() => setFilter('due')}
@@ -107,7 +107,7 @@ export function ContributionsStatusPanel({ cycle, currencyCode, initialFilter }:
         </div>
       </div>
 
-      <div className="px-6 py-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="px-4 sm:px-6 py-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5">
           <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">{String(t('admin_dashboard.due_expected', { defaultValue: 'Due Expected' } as any))}</div>
           <div className="mt-2 text-lg font-black text-white tabular-nums">{formatCurrency(cycle.totals.dueExpected, 0, currencyCode)}</div>
@@ -127,7 +127,31 @@ export function ContributionsStatusPanel({ cycle, currencyCode, initialFilter }:
         </div>
       </div>
 
-      <div className="overflow-x-auto no-scrollbar">
+      <div className="md:hidden divide-y divide-white/5">
+        {filtered.map((it) => {
+          const due = typeof it.dueDate === 'string' ? new Date(it.dueDate) : it.dueDate;
+          return (
+            <div key={it.memberId} className="p-4 sm:p-5">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold text-white truncate">{it.memberName}</div>
+                  <div className="mt-1 text-xs text-slate-500">{String(t('common.due', { defaultValue: 'Due' } as any))}: {format(due, 'MMM d')}</div>
+                  <div className="mt-2 text-sm font-semibold text-slate-200 tabular-nums">{formatCurrency(it.amount, 0, currencyCode)}</div>
+                </div>
+
+                <div className="flex-shrink-0">
+                  <span className={`inline-flex items-center gap-2 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest rounded-lg border ${pillClasses(it.status)}`}>
+                    {statusIcon(it.status)}
+                    {statusLabel(it.status)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="hidden md:block overflow-x-auto no-scrollbar">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-white/[0.02]">

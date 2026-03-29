@@ -34,5 +34,10 @@ export const sysAdminService = {
     updateGroupStatus: async (groupId: string, status: string) => {
         const response = await api.patch(`/sysadmin/groups/${groupId}`, { status });
         return response.data.data;
-    }
+    },
+
+    hardDeleteGroup: async (groupId: string) => {
+        const response = await api.delete(`/sysadmin/groups/${groupId}`);
+        return response.data.data;
+    },
 };

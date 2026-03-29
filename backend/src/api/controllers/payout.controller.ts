@@ -34,4 +34,29 @@ export class PayoutController {
             next(error);
         }
     }
+
+    async adjustPayout(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const { groupId, transactionId } = req.params as any;
+            const recordedBy = req.user!.id;
+            const userRole = req.user!.role;
+            const { amount, paymentMethod, referenceNumber, notes, paymentDate } = req.body;
+
+            const transaction = await this.payoutService.adjustPayout({
+                groupId,
+                transactionId,
+                recordedBy,
+                userRole,
+                ...(amount !== undefined ? { amount: Number(amount) } : {}),
+                ...(paymentMethod !== undefined ? { paymentMethod } : {}),
+                ...(referenceNumber !== undefined ? { referenceNumber } : {}),
+                ...(notes !== undefined ? { notes } : {}),
+                ...(paymentDate ? { paymentDate: new Date(paymentDate) } : {}),
+            });
+
+            res.status(200).json({ success: true, data: transaction });
+        } catch (error) {
+            next(error);
+        }
+    }
 }

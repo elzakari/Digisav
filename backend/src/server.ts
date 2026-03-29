@@ -1,9 +1,10 @@
+import 'dotenv/config';
+import './bootstrap/prisma-engine';
 import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
 import swaggerUi from 'swagger-ui-express';
 import { AppError } from '@/utils/errors';
@@ -29,10 +30,6 @@ import sysadminRoutes from '@/api/routes/sysadmin.routes';
 import savingsRoutes from '@/api/routes/savings.routes';
 import investmentRoutes from '@/api/routes/investment.routes';
 import unifiedRoutes from '@/api/routes/unified.routes';
-
-
-dotenv.config();
-
 const app: Application = express();
 const PORT = process.env.PORT || 3000;
 
@@ -130,13 +127,20 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
     method: req.method,
   });
 
-  if (err instanceof AppError) {
-    return res.status(err.statusCode).json({
+  const appError =
+    err instanceof AppError
+      ? err
+      : typeof (err as any)?.statusCode === 'number' && typeof (err as any)?.code === 'string'
+        ? (err as any)
+        : null;
+
+  if (appError) {
+    return res.status(appError.statusCode).json({
       success: false,
       error: {
-        code: err.code,
-        message: err.message,
-        details: err.details,
+        code: appError.code,
+        message: appError.message,
+        details: appError.details,
       },
     });
   }
@@ -155,6 +159,10 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
 app.listen(PORT, () => {
   logger.info(`Server running on port ${PORT}`);
   logger.info(`Environment: ${process.env.NODE_ENV}`);
+  logger.info({
+    prismaEngineType: process.env.PRISMA_CLIENT_ENGINE_TYPE || null,
+    databaseUrlScheme: process.env.DATABASE_URL ? process.env.DATABASE_URL.split(':')[0] : null,
+  });
 });
 
 export default app;

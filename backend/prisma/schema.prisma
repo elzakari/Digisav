@@ -88,6 +88,7 @@ model Group {
   payoutOrderType     PayoutOrderType
   startDate           DateTime?
   status              GroupStatus         @default(DRAFT)
+  deletedAt           DateTime?
   gracePeriodDays     Int                 @default(0)
   createdAt           DateTime            @default(now())
   updatedAt           DateTime            @updatedAt
@@ -266,6 +267,7 @@ enum GroupStatus {
   ACTIVE
   PAUSED
   CLOSED
+  DELETED
 }
 
 enum PaymentFrequency {

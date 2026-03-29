@@ -3,6 +3,7 @@ import { MemberService } from '@/services/members/member.service';
 import { AuthRequest } from '@/api/middleware/auth.middleware';
 import { InvitationService } from '@/services/invitations/invitation.service';
 import { ValidationError } from '@/utils/errors';
+import prisma from '@/lib/prisma';
 
 export class MemberController {
   private memberService: MemberService;
@@ -37,6 +38,35 @@ export class MemberController {
         success: true,
         data: member,
       });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async requestJoinByCode(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user!.id;
+      const { groupCode, nationalId, dateOfBirth, photoUrl } = req.body as any;
+
+      if (!groupCode || typeof groupCode !== 'string') {
+        throw new ValidationError('Group code is required');
+      }
+      if (!nationalId || typeof nationalId !== 'string') {
+        throw new ValidationError('National ID is required');
+      }
+
+      const group = await prisma.group.findUnique({ where: { groupPrefix: groupCode.trim().toUpperCase() } });
+      if (!group) throw new ValidationError('Invalid group code');
+
+      const member = await this.memberService.registerMember({
+        userId,
+        groupId: group.id,
+        nationalId: nationalId.trim(),
+        ...(photoUrl ? { photoUrl: String(photoUrl) } : {}),
+        ...(dateOfBirth ? { dateOfBirth: new Date(dateOfBirth) } : {}),
+      });
+
+      res.status(201).json({ success: true, data: member });
     } catch (error) {
       next(error);
     }

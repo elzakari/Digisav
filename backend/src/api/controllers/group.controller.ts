@@ -185,6 +185,27 @@ export class GroupController {
     }
   }
 
+  async permanentlyDeleteGroup(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user!.id;
+      const { groupId } = req.params;
+      const { confirmationText } = req.body;
+      const result = await this.groupService.permanentlyDeleteGroup(
+        groupId as string,
+        userId,
+        req.user!.role,
+        confirmationText
+      );
+
+      res.status(200).json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async updateGroupFees(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const { groupId } = req.params;

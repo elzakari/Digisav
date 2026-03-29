@@ -48,7 +48,11 @@
         "system": "Tsari",
         "unknown": "Ba a sani ba",
         "group": "Rukuni",
-        "micro": "Micro"
+        "micro": "Micro",
+        "saved": "An ajiye",
+        "error": "Kuskure",
+        "forbidden": "Ba ka da izinin shiga wannan rukuni kuma.",
+        "not_found": "Wannan rukuni ba ya samuwa kuma."
     },
     "auth": {
         "welcome_back": "Sannu Da Dawowa",
@@ -143,6 +147,9 @@
     "admin": {
         "record_contribution": "Yi Rikodin Gudunmawa",
         "record_contribution_desc": "Ƙara sabon rikodin biyan kuɗi zuwa babban littafi.",
+        "edit_payout": "Gyara rikodin biyan kudi",
+        "edit_contribution": "Gyara rikodin gudunmawa",
+        "edit_record_desc": "Gyara kuskure ta hanyar adana gyara. Za a rubuta shigar gyara don dubawa.",
         "record_payout": "Yi Rikodin Raba Kuɗi",
         "record_payout_desc": "Raba kuɗi ga mamba daga asusun rukuni.",
         "select_member": "Zaɓi Mamba",
@@ -230,6 +237,10 @@
         "close_group": "Rufe Rukuni",
         "close_group_title": "Rufe Rukuni",
         "close_group_desc": "Kana da tabbacin kana son rufe {{name}}? Mambobi ba za su iya yin gudunmawa ko raba kudi ba.",
+        "delete_group_title": "Share rukuni gaba ɗaya",
+        "delete_group_desc": "Wannan zai share {{name}} gaba ɗaya idan babu bayanai (maraya/babu komai). Ba za a iya juyawa ba.",
+        "group_deleted": "An share rukuni",
+        "group_delete_failed": "An kasa share rukuni",
         "reactivate": "Sake Kunnawa",
         "reactivate_group_title": "Sake kunna rukuni",
         "reactivate_group_desc": "Kana da tabbacin kana son sake kunna {{name}}?",
@@ -247,6 +258,18 @@
         "reset_link_title": "Hanyar Sake Saita Kalmar Sirri",
         "reset_link_expires": "Zai ƙare: {{date}}",
         "open_reset": "Bude shafin sake saita"
+    },
+    "join": {
+        "request_sent": "An tura bukata. Jira admin ya amince.",
+        "request_to_join": "Nemi shiga",
+        "request_join_title": "Shiga rukuni",
+        "request_join_desc": "Ka tura bukata ga admin na rukuni. Za a kara ka bayan an amince.",
+        "group_code": "Lambar rukuni",
+        "group_code_placeholder": "misali ABC123",
+        "national_id": "Lambar Shaida",
+        "national_id_placeholder": "Lambar shaidarka",
+        "date_of_birth_optional": "Ranar haihuwa (na zaɓi)",
+        "send_request": "Tura bukata"
     },
     "reports": {
         "type": "Nau'in Rahoto",

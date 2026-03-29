@@ -1,18 +1,22 @@
-import { PrismaClient } from '@prisma/client';
+import type { PrismaClient as PrismaClientType } from '@prisma/client';
 
-const databaseUrl = process.env.DATABASE_URL;
-const engineType = process.env.PRISMA_CLIENT_ENGINE_TYPE;
+const databaseUrlRaw = process.env.DATABASE_URL;
+const engineTypeRaw = process.env.PRISMA_CLIENT_ENGINE_TYPE;
 
-if (databaseUrl && engineType === 'dataproxy') {
+const databaseUrl = databaseUrlRaw?.trim().replace(/^['"]|['"]$/g, '');
+const engineType = engineTypeRaw?.trim().replace(/^['"]|['"]$/g, '').toLowerCase();
+
+if (engineType === 'dataproxy') {
   const isProxyUrl =
-    databaseUrl.startsWith('prisma://') ||
-    databaseUrl.startsWith('prisma+postgres://') ||
-    databaseUrl.startsWith('prisma-postgres://');
+    !!databaseUrl &&
+    (databaseUrl.startsWith('prisma://') ||
+      databaseUrl.startsWith('prisma+postgres://') ||
+      databaseUrl.startsWith('prisma-postgres://'));
 
-  if (!isProxyUrl) {
-    process.env.PRISMA_CLIENT_ENGINE_TYPE = 'binary';
-  }
+  if (!isProxyUrl) process.env.PRISMA_CLIENT_ENGINE_TYPE = 'binary';
 }
+
+const { PrismaClient }: { PrismaClient: new () => PrismaClientType } = require('@prisma/client');
 
 const prismaClientSingleton = () => {
   return new PrismaClient();

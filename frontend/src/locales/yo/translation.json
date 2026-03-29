@@ -51,7 +51,11 @@
         "system": "Ẹ̀rọ",
         "unknown": "Aìmọ̀",
         "group": "Ẹgbẹ́",
-        "micro": "Micro"
+        "micro": "Micro",
+        "saved": "Ti fipamọ",
+        "error": "Aṣiṣe",
+        "forbidden": "O ko le wọle si ẹgbẹ yii mọ.",
+        "not_found": "Ẹgbẹ yii ko si mọ."
     },
     "auth": {
         "welcome_back": "Káàbọ̀ padà",
@@ -162,6 +166,9 @@
     "admin": {
         "record_contribution": "Kọ Ìfowópamọ́ Sínú Àkọsílẹ̀",
         "record_contribution_desc": "Fi àkọsílẹ̀ ìsanwó tuntun kún inú ìwé ìṣirò.",
+        "edit_payout": "Ṣatunkọ ìforúkọsílẹ̀ ìsanwó",
+        "edit_contribution": "Ṣatunkọ ìforúkọsílẹ̀ àfikún",
+        "edit_record_desc": "Ṣe atunṣe aṣiṣe nipa fipamọ atunṣe. A o kọ ìtẹ̀wọ̀gbà atunṣe fun ayẹwo.",
         "record_payout": "Kọ Ìsanwó Sínú Àkọsílẹ̀",
         "record_payout_desc": "Pín owó fún mẹ́ḿbà látinú owó ẹgbẹ́.",
         "select_member": "Yan Mẹ́ḿbà",
@@ -249,6 +256,10 @@
         "close_group": "Ti Ẹgbẹ́ Padà",
         "close_group_title": "Ti Ẹgbẹ́ Padà",
         "close_group_desc": "Ṣé o dájú pé o fẹ́ pa {{name}}? Àwọn ọmọ ẹgbẹ́ kò ní lè ṣe àfikún owó tàbí ìsanwó mọ́.",
+        "delete_group_title": "Pa ẹgbẹ rẹ́ patapata",
+        "delete_group_desc": "Eyi yóò pa {{name}} rẹ́ patapata tí kò bá ní data (aláìní/òfo). Ko ṣee yí padà.",
+        "group_deleted": "A ti pa ẹgbẹ rẹ́",
+        "group_delete_failed": "Ko le pa ẹgbẹ rẹ́",
         "reactivate": "Tún Padà Ṣí I",
         "reactivate_group_title": "Tún ẹgbẹ́ ṣiṣẹ́",
         "reactivate_group_desc": "Ṣé o dájú pé o fẹ́ tún {{name}} ṣiṣẹ́?",
@@ -266,6 +277,18 @@
         "reset_link_title": "Ọ̀nà Asopọ̀ Ìtúnṣe Ọrọigbaniwọle",
         "reset_link_expires": "Yóò parí: {{date}}",
         "open_reset": "Ṣí ojúewé ìtúnṣe"
+    },
+    "join": {
+        "request_sent": "A ti ran ìbéèrè. Duro de admin lati fọwọ́si.",
+        "request_to_join": "Bẹ̀rẹ̀ láti darapọ",
+        "request_join_title": "Darapọ mọ ẹgbẹ",
+        "request_join_desc": "Ran ìbéèrè sí olùdarí ẹgbẹ. Wọn yóò fi ọ kun lẹ́yìn ìfọwọ́si.",
+        "group_code": "Kóòdù ẹgbẹ",
+        "group_code_placeholder": "àpẹẹrẹ ABC123",
+        "national_id": "ID Orílẹ̀-èdè",
+        "national_id_placeholder": "Nọ́mbà ID rẹ",
+        "date_of_birth_optional": "Ọjọ́ ìbí (àṣàyàn)",
+        "send_request": "Ran ìbéèrè"
     },
     "reports": {
         "type": "Iru Iroyin",

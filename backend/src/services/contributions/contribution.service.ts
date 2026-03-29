@@ -18,6 +18,18 @@ interface RecordContributionData {
   isPersonalSavings?: boolean;
 }
 
+interface UpdateContributionData {
+  groupId: string;
+  contributionId: string;
+  userId: string;
+  userRole: string;
+  amount?: number;
+  paymentDate?: Date;
+  paymentMethod?: PaymentMethod;
+  referenceNumber?: string | null;
+  notes?: string | null;
+}
+
 export class ContributionService {
   private ledgerService: LedgerService;
   private prisma: PrismaClient;
@@ -343,6 +355,94 @@ export class ContributionService {
     return result;
   }
 
+  async updateContribution(data: UpdateContributionData) {
+    const existing = await this.prisma.contribution.findUnique({
+      where: { id: data.contributionId },
+      include: { member: { include: { group: true } }, group: true },
+    });
+
+    if (!existing || existing.groupId !== data.groupId) {
+      throw new NotFoundError('Contribution');
+    }
+
+    const group = existing.group;
+    const canEdit = group.adminUserId === data.userId || data.userRole === 'SYS_ADMIN' || data.userRole === 'ADMIN';
+    if (!canEdit) throw new ValidationError('Insufficient permissions to update contribution');
+
+    const nextAmount = data.amount !== undefined ? data.amount : Number(existing.amount);
+    const nextPaymentDate = data.paymentDate ?? existing.paymentDate;
+    const nextPaymentMethod = data.paymentMethod ?? existing.paymentMethod;
+    const nextReferenceNumber = data.referenceNumber !== undefined ? data.referenceNumber : existing.referenceNumber;
+    const nextNotes = data.notes !== undefined ? data.notes : existing.notes;
+
+    const startDate = group.startDate ? new Date(group.startDate) : new Date(group.createdAt);
+    const dueDate = this.calculateDueDate(startDate, existing.cycleNumber, group.paymentFrequency);
+
+    const hash = generateHash({
+      memberId: existing.memberId,
+      groupId: existing.groupId,
+      amount: nextAmount,
+      currencyCode: existing.currencyCode,
+      paymentDate: nextPaymentDate,
+      paymentMethod: nextPaymentMethod,
+      referenceNumber: nextReferenceNumber ?? undefined,
+      notes: nextNotes ?? undefined,
+      recordedBy: existing.recordedBy,
+      cycleNumber: existing.cycleNumber,
+      dueDate,
+    } as any);
+
+    const updated = await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      const contribution = await tx.contribution.update({
+        where: { id: existing.id },
+        data: {
+          amount: nextAmount,
+          paymentDate: nextPaymentDate,
+          paymentMethod: nextPaymentMethod,
+          referenceNumber: nextReferenceNumber as any,
+          notes: nextNotes as any,
+          dueDate,
+          hash,
+        },
+      });
+
+      const delta = Number(nextAmount) - Number(existing.amount);
+
+      const ledgerService = new LedgerService(tx as any);
+      await ledgerService.createTransaction({
+        groupId: existing.groupId,
+        memberId: existing.memberId,
+        transactionType: TransactionType.ADJUSTMENT,
+        amount: delta,
+        currencyCode: existing.currencyCode,
+        referenceId: existing.id,
+        recordedBy: data.userId,
+        metadata: {
+          type: 'CONTRIBUTION_EDIT',
+          contributionId: existing.id,
+          old: {
+            amount: Number(existing.amount),
+            paymentDate: existing.paymentDate,
+            paymentMethod: existing.paymentMethod,
+            referenceNumber: existing.referenceNumber,
+            notes: existing.notes,
+          },
+          new: {
+            amount: Number(nextAmount),
+            paymentDate: nextPaymentDate,
+            paymentMethod: nextPaymentMethod,
+            referenceNumber: nextReferenceNumber,
+            notes: nextNotes,
+          },
+        },
+      });
+
+      return contribution;
+    });
+
+    return updated;
+  }
+
   async verifyLedgerIntegrity(groupId: string) {
     return this.ledgerService.verifyChain(groupId);
   }
@@ -354,6 +454,7 @@ export class ContributionService {
     });
 
     if (!group) throw new NotFoundError('Group');
+    if (group.status === 'DELETED') throw new NotFoundError('Group');
 
     const totalCollected = await this.prisma.contribution.aggregate({
       where: { groupId, status: 'COMPLETED' },
@@ -450,6 +551,7 @@ export class ContributionService {
     });
 
     if (!group) throw new NotFoundError('Group');
+    if (group.status === 'DELETED') throw new NotFoundError('Group');
 
     const contributions = await this.prisma.contribution.findMany({
       where: { groupId },

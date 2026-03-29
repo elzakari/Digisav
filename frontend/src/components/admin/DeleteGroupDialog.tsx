@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { groupService } from '@/services/group.service';
 import { useTranslation } from 'react-i18next';
+import { publishAppEvent } from '@/lib/appEvents';
 
 interface DeleteGroupDialogProps {
     group: any;
@@ -18,11 +19,13 @@ export function DeleteGroupDialog({ group, isOpen, onClose }: DeleteGroupDialogP
     const [error, setError] = useState('');
 
     const isDraft = group?.status === 'DRAFT';
+    const isClosed = group?.status === 'CLOSED';
 
     const mutation = useMutation({
         mutationFn: () => groupService.deleteGroup(group.id),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['groups'] });
+            publishAppEvent({ type: 'groups_changed', groupId: group.id });
             onClose();
             navigate('/admin/dashboard');
         },
@@ -55,7 +58,7 @@ export function DeleteGroupDialog({ group, isOpen, onClose }: DeleteGroupDialogP
                     </div>
                     <div>
                         <h2 className="text-xl font-black text-white tracking-tight">
-                            {isDraft ? t('admin.delete_group_perm') : t('admin.archive_group')}
+                            {isDraft ? t('admin.delete_group_perm') : t('dashboard.close_group')}
                         </h2>
                         <p className="text-slate-400 text-[10px] mt-0.5 leading-relaxed">
                             {isDraft ? t('admin.delete_draft_msg') : t('admin.archive_active_msg')}
@@ -89,18 +92,37 @@ export function DeleteGroupDialog({ group, isOpen, onClose }: DeleteGroupDialogP
                     >
                         {t('common.cancel')}
                     </button>
-                    <button
-                        onClick={() => mutation.mutate()}
-                        disabled={!isConfirmed || mutation.isPending}
-                        className="flex-[2] relative overflow-hidden group/btn px-6 py-3 bg-gradient-to-r from-rose-600 to-rose-500 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] text-white shadow-xl shadow-rose-500/20 hover:shadow-rose-500/40 transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                        <span className="relative z-10">
-                            {mutation.isPending 
-                                ? t('common.processing') 
-                                : isDraft ? t('admin.delete_forever') : t('admin.archive_group')}
-                        </span>
-                        <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000" />
-                    </button>
+                    <div className="flex-[2] flex gap-3">
+                        <button
+                            onClick={() => mutation.mutate()}
+                            disabled={!isConfirmed || mutation.isPending}
+                            className="flex-1 relative overflow-hidden group/btn px-6 py-3 bg-gradient-to-r from-amber-600 to-amber-500 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] text-white shadow-xl shadow-amber-500/20 hover:shadow-amber-500/40 transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                            <span className="relative z-10">
+                                {mutation.isPending
+                                    ? t('common.processing')
+                                    : isDraft ? t('admin.delete_forever') : t('dashboard.close_group')}
+                            </span>
+                            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000" />
+                        </button>
+
+                        {!isDraft && (
+                            <button
+                                onClick={() => {
+                                    onClose();
+                                    setConfirmText('');
+                                    setError('');
+                                    navigate(`/admin/groups/${group.id}/delete`);
+                                }}
+                                disabled={!isConfirmed || !isClosed}
+                                className="flex-1 relative overflow-hidden group/btn px-6 py-3 bg-gradient-to-r from-rose-600 to-rose-500 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] text-white shadow-xl shadow-rose-500/20 hover:shadow-rose-500/40 transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
+                                title={isClosed ? undefined : 'Close the group first to enable permanent deletion'}
+                            >
+                                <span className="relative z-10">{t('admin.delete_forever')}</span>
+                                <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000" />
+                            </button>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>

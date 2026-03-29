@@ -62,8 +62,8 @@ export function MemberStatusTable({ data, currencyCode }: MemberStatusTableProps
 
   return (
     <section className="glass-card overflow-hidden">
-      <div className="px-6 py-5 border-b border-white/5 flex items-center justify-between gap-4 bg-white/[0.02]">
-        <div>
+      <div className="px-4 sm:px-6 py-5 border-b border-white/5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white/[0.02]">
+        <div className="min-w-0">
           <div className="text-sm font-black text-white tracking-tight">{String(t('admin_dashboard.member_status_title', { defaultValue: 'Member status' } as any))}</div>
           <div className="text-xs text-slate-500 mt-1">
             {data.kind === 'tontine'
@@ -73,7 +73,7 @@ export function MemberStatusTable({ data, currencyCode }: MemberStatusTableProps
         </div>
 
         {data.kind === 'tontine' ? (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <button
               type="button"
               onClick={() => setFilter('due')}
@@ -111,7 +111,85 @@ export function MemberStatusTable({ data, currencyCode }: MemberStatusTableProps
         ) : null}
       </div>
 
-      <div className="overflow-x-auto no-scrollbar">
+      <div className="md:hidden divide-y divide-white/5">
+        {tontineItems
+          ? filteredTontine.map((it) => {
+              const last = it.lastPaymentDate
+                ? format(typeof it.lastPaymentDate === 'string' ? new Date(it.lastPaymentDate) : it.lastPaymentDate, 'MMM d, yyyy')
+                : '—';
+
+              return (
+                <div key={it.memberId} className="p-4 sm:p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold text-white truncate">{it.memberName}</div>
+                      <div className="mt-2 grid grid-cols-2 gap-3">
+                        <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/5">
+                          <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">{String(t('admin_dashboard.expected', { defaultValue: 'Expected' } as any))}</div>
+                          <div className="mt-1 text-sm font-bold text-slate-200 tabular-nums">{formatCurrency(it.expected, 0, currencyCode)}</div>
+                        </div>
+                        <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/5">
+                          <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">{String(t('common.paid', { defaultValue: 'Paid' } as any))}</div>
+                          <div className="mt-1 text-sm font-bold text-emerald-300 tabular-nums">{formatCurrency(it.paid, 0, currencyCode)}</div>
+                        </div>
+                        <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/5 col-span-2">
+                          <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">{String(t('admin_dashboard.outstanding', { defaultValue: 'Outstanding' } as any))}</div>
+                          <div className="mt-1 text-sm font-bold text-amber-300 tabular-nums">{formatCurrency(it.outstanding, 0, currencyCode)}</div>
+                        </div>
+                      </div>
+                      <div className="mt-3 text-xs text-slate-500">{String(t('admin_dashboard.last_payment', { defaultValue: 'Last payment' } as any))}: {last}</div>
+                    </div>
+
+                    <div className="flex-shrink-0">
+                      <span className={`inline-flex items-center gap-2 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest rounded-lg border ${statusPill(it.status)}`}>
+                        {statusIcon(it.status)}
+                        {it.status === 'PAID'
+                          ? String(t('common.paid', { defaultValue: 'Paid' } as any))
+                          : it.status === 'PAST_DUE'
+                            ? String(t('common.past_due', { defaultValue: 'Past due' } as any))
+                            : String(t('common.due', { defaultValue: 'Due' } as any))}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          : null}
+
+        {microItems
+          ? microItems.map((it) => (
+              <div key={it.memberId} className="p-4 sm:p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-white truncate">{it.memberName}</div>
+                    <div className="mt-2 grid grid-cols-2 gap-3">
+                      <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/5">
+                        <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">{String(t('admin_dashboard.balance', { defaultValue: 'Balance' } as any))}</div>
+                        <div className="mt-1 text-sm font-bold text-slate-200 tabular-nums">{formatCurrency(it.balance, 0, currencyCode)}</div>
+                      </div>
+                      <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/5">
+                        <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">{String(t('admin_dashboard.deposits', { defaultValue: 'Deposits' } as any))}</div>
+                        <div className="mt-1 text-sm font-bold text-emerald-300 tabular-nums">{formatCurrency(it.deposits, 0, currencyCode)}</div>
+                      </div>
+                      <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/5">
+                        <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">{String(t('admin_dashboard.withdrawals', { defaultValue: 'Withdrawals' } as any))}</div>
+                        <div className="mt-1 text-sm font-bold text-rose-300 tabular-nums">{formatCurrency(it.withdrawals, 0, currencyCode)}</div>
+                      </div>
+                      <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/5">
+                        <div className="text-[10px] font-bold uppercase tracking-widest text-slate-500">{String(t('admin_dashboard.net', { defaultValue: 'Net' } as any))}</div>
+                        <div className={`mt-1 text-sm font-bold tabular-nums ${it.netChange >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
+                          {formatCurrency(it.netChange, 0, currencyCode)}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))
+          : null}
+      </div>
+
+      <div className="hidden md:block overflow-x-auto no-scrollbar">
         {tontineItems ? (
           <table className="w-full text-left border-collapse">
             <thead>

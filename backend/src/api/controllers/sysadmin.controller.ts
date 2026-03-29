@@ -4,13 +4,26 @@ import crypto from 'crypto';
 import { AuthRequest } from '@/api/middleware/auth.middleware';
 import bcrypt from 'bcrypt';
 import { PasswordResetService } from '@/services/auth/password-reset.service';
+import { Prisma } from '@prisma/client';
 
 export const sysAdminController = {
     // Get platform-wide metrics
     getPlatformStats: async (req: Request, res: Response) => {
         try {
+            const includeDeletedUsers = String(req.query.includeDeletedUsers || 'false') === 'true';
+            const nonDeletedUsersWhere: Prisma.UserWhereInput = {
+                NOT: {
+                    OR: [
+                        { email: { startsWith: 'deleted+' } },
+                        { email: { endsWith: '@digisav.invalid' } },
+                        { phoneNumber: { startsWith: 'del_' } },
+                        { fullName: { equals: 'Deleted User' } },
+                    ],
+                },
+            };
+
             const [totalUsers, totalGroups, totalTransactions] = await Promise.all([
-                prisma.user.count(),
+                prisma.user.count({ where: includeDeletedUsers ? undefined : nonDeletedUsersWhere }),
                 prisma.group.count(),
                 prisma.transaction.count(),
             ]);
@@ -58,10 +71,12 @@ export const sysAdminController = {
                 }),
                 prisma.user.groupBy({
                     by: ['role'],
+                    where: includeDeletedUsers ? undefined : nonDeletedUsersWhere,
                     _count: { _all: true },
                 }),
                 prisma.user.groupBy({
                     by: ['status'],
+                    where: includeDeletedUsers ? undefined : nonDeletedUsersWhere,
                     _count: { _all: true },
                 }),
                 prisma.transaction.groupBy({
@@ -73,9 +88,9 @@ export const sysAdminController = {
             const contribByCurrency = contribByCurrencyResult.status === 'fulfilled' ? contribByCurrencyResult.value : [];
             const payoutByCurrency = payoutByCurrencyResult.status === 'fulfilled' ? payoutByCurrencyResult.value : [];
             const feeByCurrency = feeByCurrencyResult.status === 'fulfilled' ? feeByCurrencyResult.value : [];
-            const usersByRole = usersByRoleResult.status === 'fulfilled' ? usersByRoleResult.value : [];
-            const usersByStatus = usersByStatusResult.status === 'fulfilled' ? usersByStatusResult.value : [];
-            const transactionsByType = transactionsByTypeResult.status === 'fulfilled' ? transactionsByTypeResult.value : [];
+            const usersByRole: any[] = usersByRoleResult.status === 'fulfilled' ? (usersByRoleResult.value as any) : [];
+            const usersByStatus: any[] = usersByStatusResult.status === 'fulfilled' ? (usersByStatusResult.value as any) : [];
+            const transactionsByType: any[] = transactionsByTypeResult.status === 'fulfilled' ? (transactionsByTypeResult.value as any) : [];
 
             const contributionsByCurrency = contribByCurrency
                 .map((r) => ({ currencyCode: r.currencyCode, total: Number(r._sum.amount || 0) }))
@@ -107,13 +122,13 @@ export const sysAdminController = {
                 }, {})
                 : { TONTINE: activeGroups };
 
-            const roles = usersByRole.reduce((acc: any, r) => {
-                acc[r.role] = r._count._all;
+            const roles = usersByRole.reduce((acc: any, r: any) => {
+                acc[r.role] = r._count?._all ?? r._count?.id ?? 0;
                 return acc;
             }, {});
 
-            const userStatuses = usersByStatus.reduce((acc: any, r) => {
-                acc[r.status] = r._count._all;
+            const userStatuses = usersByStatus.reduce((acc: any, r: any) => {
+                acc[r.status] = r._count?._all ?? r._count?.id ?? 0;
                 return acc;
             }, {});
 
@@ -159,7 +174,20 @@ export const sysAdminController = {
     // Get all users categorized
     getAllUsers: async (req: Request, res: Response) => {
         try {
+            const includeDeleted = String(req.query.includeDeleted || 'false') === 'true';
+            const nonDeletedWhere: Prisma.UserWhereInput = {
+                NOT: {
+                    OR: [
+                        { email: { startsWith: 'deleted+' } },
+                        { email: { endsWith: '@digisav.invalid' } },
+                        { phoneNumber: { startsWith: 'del_' } },
+                        { fullName: { equals: 'Deleted User' } },
+                    ],
+                },
+            };
+
             const users = await prisma.user.findMany({
+                where: includeDeleted ? undefined : nonDeletedWhere,
                 select: {
                     id: true,
                     fullName: true,
@@ -391,6 +419,69 @@ export const sysAdminController = {
         } catch (error) {
             console.error('Error updating group status:', error);
             res.status(500).json({ status: 'error', message: 'Failed to update group status' });
+        }
+    },
+
+    hardDeleteGroup: async (req: AuthRequest, res: Response) => {
+        try {
+            const groupId = req.params.groupId as string;
+
+            const group = await prisma.group.findUnique({
+                where: { id: groupId },
+                select: {
+                    id: true,
+                    groupName: true,
+                    status: true,
+                    _count: {
+                        select: {
+                            members: true,
+                            contributions: true,
+                            transactions: true,
+                            messages: true,
+                            invitations: true,
+                            savingsGoals: true,
+                            withdrawalRequests: true,
+                            investmentAccounts: true,
+                        },
+                    },
+                },
+            });
+
+            if (!group) {
+                return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Group not found' } });
+            }
+
+            const counts = group._count;
+            const isEmpty =
+                counts.members === 0 &&
+                counts.contributions === 0 &&
+                counts.transactions === 0 &&
+                counts.messages === 0 &&
+                counts.invitations === 0 &&
+                counts.savingsGoals === 0 &&
+                counts.withdrawalRequests === 0 &&
+                counts.investmentAccounts === 0;
+
+            if (!isEmpty) {
+                return res.status(400).json({
+                    success: false,
+                    error: {
+                        code: 'BAD_REQUEST',
+                        message: 'Group cannot be hard-deleted because it contains data. Close it and use permanent deletion instead.',
+                        details: counts,
+                    },
+                });
+            }
+
+            await prisma.group.delete({ where: { id: groupId } });
+
+            return res.status(200).json({
+                success: true,
+                data: { id: group.id, groupName: group.groupName, deleted: true },
+            });
+        } catch (error) {
+            console.error('Error hard deleting group:', error);
+            res.status(500).json({ status: 'error', message: 'Failed to delete group' });
         }
     },
 };

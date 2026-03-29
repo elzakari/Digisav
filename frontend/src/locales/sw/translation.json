@@ -48,7 +48,11 @@
         "system": "Mfumo",
         "unknown": "Haijulikani",
         "group": "Kikundi",
-        "micro": "Micro"
+        "micro": "Micro",
+        "saved": "Imehifadhiwa",
+        "error": "Hitilafu",
+        "forbidden": "Huna tena ruhusa ya kufikia kikundi hiki.",
+        "not_found": "Kikundi hiki hakipatikani tena."
     },
     "dashboard": {
         "title": "Uchambuzi wa Kikundi",
@@ -188,6 +192,9 @@
     "admin": {
         "record_contribution": "Rekodi Mchango",
         "record_contribution_desc": "Ongeza rekodi mpya ya malipo kwenye rejista.",
+        "edit_payout": "Hariri rekodi ya malipo",
+        "edit_contribution": "Hariri rekodi ya mchango",
+        "edit_record_desc": "Rekebisha makosa kwa kuhifadhi marekebisho. Rekodi ya marekebisho itaongezwa kwa ukaguzi.",
         "record_payout": "Rekodi Malipo ya Payout",
         "record_payout_desc": "Sambaza fedha kwa mwanachama kutoka kwenye mfuko wa kikundi.",
         "select_member": "Chagua Mwanachama",
@@ -250,6 +257,10 @@
         "close_group": "Funga Kikundi",
         "close_group_title": "Funga Kikundi",
         "close_group_desc": "Una uhakika unataka kufunga {{name}}? Wanachama hawataweza tena kutoa michango au malipo.",
+        "delete_group_title": "Futa kikundi kabisa",
+        "delete_group_desc": "Hii itafuta {{name}} kabisa ikiwa haina data (yatima/tupu). Hatua hii haiwezi kutenduliwa.",
+        "group_deleted": "Kikundi kimefutwa",
+        "group_delete_failed": "Imeshindikana kufuta kikundi",
         "reactivate": "Anzisha Tena",
         "reactivate_group_title": "Anzisha Kikundi Tena",
         "reactivate_group_desc": "Una uhakika unataka kuanzisha {{name}} tena?",
@@ -301,6 +312,18 @@
         "search_placeholder": "Tafuta kwenye ripoti…",
         "column_fallback": "Safu {{index}}",
         "no_rows_match": "Hakuna mistari inayolingana na utafutaji wako."
+    },
+    "join": {
+        "request_sent": "Ombi limetumwa. Subiri msimamizi athibitishe.",
+        "request_to_join": "Omba kujiunga",
+        "request_join_title": "Jiunge na kikundi",
+        "request_join_desc": "Tuma ombi kwa msimamizi wa kikundi. Utaongezwa baada ya kuthibitishwa.",
+        "group_code": "Msimbo wa kikundi",
+        "group_code_placeholder": "mf. ABC123",
+        "national_id": "Kitambulisho cha Taifa",
+        "national_id_placeholder": "Nambari yako ya kitambulisho",
+        "date_of_birth_optional": "Tarehe ya kuzaliwa (si lazima)",
+        "send_request": "Tuma ombi"
     },
     "admin_dashboard": {
         "period_current_cycle": "Mzunguko wa sasa",

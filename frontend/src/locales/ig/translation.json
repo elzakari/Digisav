@@ -51,7 +51,11 @@
         "system": "Sistemu",
         "unknown": "Amaghị ama",
         "group": "Otu",
-        "micro": "Micro"
+        "micro": "Micro",
+        "saved": "Echekwala",
+        "error": "Njehie",
+        "forbidden": "I nweghịzi ike ịnweta otu a.",
+        "not_found": "Otu a adịghịzi."
     },
     "auth": {
         "welcome_back": "Nnọọ ọzọ",
@@ -163,6 +167,9 @@
     "admin": {
         "record_contribution": "Dekọọ Onyinye",
         "record_contribution_desc": "Gbakwunye ndekọ ego ọhụrụ n'ime akwụkwọ ndekọ ego.",
+        "edit_payout": "Dezie ndekọ nkwụnye",
+        "edit_contribution": "Dezie ndekọ onyinye",
+        "edit_record_desc": "Dozie njehie site n'ịchekwa mmezi. A ga-edekọ mmezi maka nyocha.",
         "record_payout": "Dekọọ Nkesa Ego",
         "record_payout_desc": "Kesara onye otu ego site n'akaụntụ otu.",
         "select_member": "Họrọ Onye Otu",
@@ -250,6 +257,10 @@
         "close_group": "Mechie Otu",
         "close_group_title": "Mechie Otu",
         "close_group_desc": "Ị ji n'aka na ịchọrọ imechi {{name}}? Ndị otu agaghị enwe ike ịkwụ ụgwọ ma ọ bụ ịnakọta ụgwọ ọzọ.",
+        "delete_group_title": "Hichapụ otu kpamkpam",
+        "delete_group_desc": "Nke a ga-hichapụ {{name}} kpamkpam ma ọ bụrụ na enweghị data (orphan/efu). Enweghị ike iweghachi ya.",
+        "group_deleted": "E hichapụla otu",
+        "group_delete_failed": "Enweghị ike ihichapụ otu",
         "reactivate": "Mee ka ọ rụọ ọrụ ọzọ",
         "reactivate_group_title": "Megharịa Otu",
         "reactivate_group_desc": "Ị ji n'aka na ịchọrọ imegharịa {{name}}?",
@@ -267,6 +278,18 @@
         "reset_link_title": "Njikọ Ịtọgharịa Paswọọdụ",
         "reset_link_expires": "Ga-agwụ: {{date}}",
         "open_reset": "Mepee ibe ịtọgharịa"
+    },
+    "join": {
+        "request_sent": "E zigara arịrịọ. Chere ka admin kwadoo.",
+        "request_to_join": "Rịọ ịbanye",
+        "request_join_title": "Soro n'otu",
+        "request_join_desc": "Zipu arịrịọ nye onye nchịkwa otu. A ga-agbakwunye gị mgbe akwadoro.",
+        "group_code": "Koodu otu",
+        "group_code_placeholder": "dịka ABC123",
+        "national_id": "Nọmba NJirimara",
+        "national_id_placeholder": "Nọmba njirimara gị",
+        "date_of_birth_optional": "Ụbọchị ọmụmụ (nhọrọ)",
+        "send_request": "Zipu arịrịọ"
     },
     "reports": {
         "type": "Ụdị Akụkọ",

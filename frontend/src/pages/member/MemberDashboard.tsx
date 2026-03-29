@@ -12,6 +12,9 @@ export function MemberDashboard() {
     const { data: groups, isLoading: groupsLoading } = useQuery({
         queryKey: ['my-groups'],
         queryFn: () => groupService.getMyGroups(),
+        refetchOnWindowFocus: 'always',
+        refetchOnReconnect: true,
+        refetchInterval: 60_000,
     });
 
     if (groupsLoading) return (
@@ -133,6 +136,9 @@ function MemberGlobalStats() {
     const { data: stats, isLoading } = useQuery({
         queryKey: ['member-stats'],
         queryFn: groupService.getMemberStats,
+        refetchOnWindowFocus: 'always',
+        refetchOnReconnect: true,
+        refetchInterval: 30_000,
     });
 
     if (isLoading) return (

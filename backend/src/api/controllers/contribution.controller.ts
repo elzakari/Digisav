@@ -38,6 +38,31 @@ export class ContributionController {
     }
   }
 
+  async updateContribution(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user!.id;
+      const userRole = req.user!.role;
+      const { groupId, contributionId } = req.params as any;
+      const { amount, paymentDate, paymentMethod, referenceNumber, notes } = req.body;
+
+      const updated = await this.contributionService.updateContribution({
+        groupId,
+        contributionId,
+        userId,
+        userRole,
+        ...(amount !== undefined ? { amount } : {}),
+        ...(paymentDate ? { paymentDate: new Date(paymentDate) } : {}),
+        ...(paymentMethod ? { paymentMethod: paymentMethod as PaymentMethod } : {}),
+        ...(referenceNumber !== undefined ? { referenceNumber } : {}),
+        ...(notes !== undefined ? { notes } : {}),
+      });
+
+      res.status(200).json({ success: true, data: updated });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async getGroupStats(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const { groupId } = req.params as any;

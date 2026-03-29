@@ -70,10 +70,14 @@ export const requireGroupAdmin = async (
 
     const group = await prisma.group.findUnique({
       where: { id: groupId },
-      select: { adminUserId: true },
+      select: { adminUserId: true, status: true },
     });
 
     if (!group) {
+      throw new NotFoundError('Group not found');
+    }
+
+    if (group.status === 'DELETED' && req.user.role !== 'SYS_ADMIN') {
       throw new NotFoundError('Group not found');
     }
 
@@ -104,10 +108,14 @@ export const requireGroupMember = async (
 
     const group = await prisma.group.findUnique({
       where: { id: groupId },
-      select: { adminUserId: true },
+      select: { adminUserId: true, status: true },
     });
 
     if (!group) {
+      throw new NotFoundError('Group not found');
+    }
+
+    if (group.status === 'DELETED' && req.user.role !== 'SYS_ADMIN') {
       throw new NotFoundError('Group not found');
     }
 
@@ -122,10 +130,10 @@ export const requireGroupMember = async (
           userId: req.user.id,
         },
       },
-      select: { id: true },
+      select: { id: true, status: true },
     });
 
-    if (!membership) {
+    if (!membership || membership.status !== 'ACTIVE') {
       throw new ForbiddenError('You do not have access to this group');
     }
 

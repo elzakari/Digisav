@@ -19,6 +19,21 @@ export const contributionService = {
     return response.data.data;
   },
 
+  async updateContribution(
+    groupId: string,
+    contributionId: string,
+    data: {
+      amount?: number;
+      paymentDate?: string;
+      paymentMethod?: string;
+      referenceNumber?: string | null;
+      notes?: string | null;
+    }
+  ) {
+    const response = await api.patch(`/groups/${groupId}/contributions/${contributionId}`, data);
+    return response.data.data;
+  },
+
   async downloadReport(
     groupId: string,
     startDate: string,

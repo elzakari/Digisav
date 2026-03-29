@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { GroupController } from '@/api/controllers/group.controller';
 import { authenticate, requireGroupAdmin } from '@/api/middleware/auth.middleware';
 import { validateRequest } from '@/api/middleware/validation.middleware';
-import { createGroupSchema, updateGroupSchema } from '@/api/validators/group.validators';
+import { createGroupSchema, updateGroupSchema, permanentDeleteGroupSchema } from '@/api/validators/group.validators';
 
 const router = Router();
 const controller = new GroupController();
@@ -43,9 +43,19 @@ router.post('/:groupId/activate', authenticate, requireGroupAdmin, controller.ac
 // Delete group (DRAFT = hard delete, ACTIVE = soft archive)
 router.delete('/:groupId', authenticate, requireGroupAdmin, controller.deleteGroup.bind(controller));
 
+// Permanently delete group (requires CLOSED or DRAFT)
+router.delete(
+  '/:groupId/permanent',
+  authenticate,
+  requireGroupAdmin,
+  validateRequest(permanentDeleteGroupSchema),
+  controller.permanentlyDeleteGroup.bind(controller)
+);
+
 // Group Admin specific settings
 router.patch('/:groupId/fees', authenticate, requireGroupAdmin, controller.updateGroupFees.bind(controller));
 router.patch('/:groupId/micro-investments', authenticate, requireGroupAdmin, controller.toggleMicroInvestments.bind(controller));
+router.patch('/:groupId/investments/toggle', authenticate, requireGroupAdmin, controller.toggleMicroInvestments.bind(controller));
 router.post('/:groupId/notifications', authenticate, requireGroupAdmin, controller.sendGroupNotification.bind(controller));
 router.post('/:groupId/notify', authenticate, requireGroupAdmin, controller.sendGroupNotification.bind(controller));
 
