@@ -5,40 +5,94 @@ export class UnifiedDashboardService {
    * Calculates the total net worth and breakdown across all services
    */
   async getUserNetWorth(userId: string) {
-    // 1. Group contributions (Total amount contributed across all groups)
-    const groupContributions = await prisma.contribution.aggregate({
-      where: { 
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { defaultCurrency: true },
+    });
+    const preferredCurrency = user?.defaultCurrency || 'KES';
+
+    const groupTotals = await prisma.contribution.groupBy({
+      by: ['currencyCode'],
+      where: {
         member: { userId },
-        status: 'COMPLETED'
+        status: 'COMPLETED',
       },
       _sum: { amount: true },
     });
 
-    // 2. Personal savings goals (Total current amount saved)
-    const savingsGoals = await prisma.savingsGoal.aggregate({
-      where: { userId },
+    const savingsTotals = await prisma.savingsGoal.groupBy({
+      by: ['currencyCode'],
+      where: {
+        userId,
+        status: { in: ['ACTIVE', 'PAUSED', 'COMPLETED'] },
+        group: {
+          is: {
+            groupType: 'MICRO_SAVINGS',
+            status: 'ACTIVE',
+          },
+        },
+      },
       _sum: { currentAmount: true },
     });
 
-    // 3. Investment accounts (Total current value)
-    const investments = await prisma.investmentAccount.aggregate({
+    const investmentTotals = await prisma.investmentAccount.groupBy({
+      by: ['currencyCode'],
       where: { userId },
       _sum: { totalValue: true },
     });
 
-    const totalNetWorth = 
-      Number(groupContributions._sum.amount || 0) +
-      Number(savingsGoals._sum.currentAmount || 0) +
-      Number(investments._sum.totalValue || 0);
+    const totalsMap = new Map<string, { groupContributions: number; personalSavings: number; investments: number }>();
+    const upsert = (currencyCode: string) => {
+      if (!totalsMap.has(currencyCode)) {
+        totalsMap.set(currencyCode, { groupContributions: 0, personalSavings: 0, investments: 0 });
+      }
+      return totalsMap.get(currencyCode)!;
+    };
+
+    for (const r of groupTotals) {
+      const row = upsert(r.currencyCode);
+      row.groupContributions = Number(r._sum.amount || 0);
+    }
+
+    for (const r of savingsTotals) {
+      const row = upsert(r.currencyCode);
+      row.personalSavings = Number(r._sum.currentAmount || 0);
+    }
+
+    for (const r of investmentTotals) {
+      const row = upsert(r.currencyCode);
+      row.investments = Number(r._sum.totalValue || 0);
+    }
+
+    const totalsByCurrency = Array.from(totalsMap.entries())
+      .map(([currencyCode, parts]) => ({
+        currencyCode,
+        total: parts.groupContributions + parts.personalSavings + parts.investments,
+        breakdown: parts,
+      }))
+      .filter((x) => x.total !== 0)
+      .sort((a, b) => b.total - a.total);
+
+    const currencyCode = totalsByCurrency.some((t) => t.currencyCode === preferredCurrency)
+      ? preferredCurrency
+      : totalsByCurrency.length === 1
+        ? totalsByCurrency[0].currencyCode
+        : null;
+
+    const current = currencyCode
+      ? totalsByCurrency.find((t) => t.currencyCode === currencyCode)
+      : null;
 
     return {
-      totalNetWorth,
+      totalNetWorth: current?.total || 0,
       breakdown: {
-        groupContributions: Number(groupContributions._sum.amount || 0),
-        personalSavings: Number(savingsGoals._sum.currentAmount || 0),
-        investments: Number(investments._sum.totalValue || 0),
+        groupContributions: current?.breakdown.groupContributions || 0,
+        personalSavings: current?.breakdown.personalSavings || 0,
+        investments: current?.breakdown.investments || 0,
       },
-      currencyCode: 'KES', // Defaulting to KES for now, could be dynamic
+      currencyCode,
+      totalsByCurrency: totalsByCurrency.map((t) => ({ currencyCode: t.currencyCode, total: t.total })),
+      multiCurrency: totalsByCurrency.length > 1,
     };
   }
 

@@ -75,6 +75,9 @@
         "set_current": "Set Current",
         "standard_micro": "Standard + Micro",
         "approve": "Approve",
+        "reject": "Reject",
+        "correction": "Correction",
+        "fee": "Fee",
         "deny": "Deny",
         "confirm_deny": "Are you sure you want to deny this request?",
         "history": "History",
@@ -106,8 +109,16 @@
     "role": {
         "ADMIN": "System Admin",
         "MEMBER": "Member",
-        "SYS_ADMIN": "SYS ADMIN",
+        "SYS_ADMIN": "SUPER ADMIN",
         "GROUP_ADMIN": "ADMIN"
+    },
+    "nav": {
+        "platform": "Platform",
+        "platform_overview": "Platform Overview",
+        "users_directory": "Users Directory",
+        "groups_moderation": "Groups Moderation",
+        "audit": "Audit",
+        "quick_actions": "Quick"
     },
     "frequency": {
         "daily": "Daily",
@@ -541,6 +552,7 @@
         "live": "Live",
         "payout_recorded": "Payout recorded",
         "contribution_recorded": "Contribution recorded",
+        "correction_recorded": "Correction recorded",
         "by": "by",
         "no_recent_activity": "No recent activity yet.",
         "contributions_status_title": "Contributions Status",

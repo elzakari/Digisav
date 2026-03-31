@@ -8,6 +8,7 @@ const controller = new SavingsController();
 // --- Savings Goals ---
 router.post('/goals', authenticate, controller.createGoal.bind(controller));
 router.get('/goals', authenticate, controller.getMyGoals.bind(controller));
+router.delete('/goals/:goalId', authenticate, controller.deleteGoal.bind(controller));
 router.post('/goals/:goalId/deposits', authenticate, controller.makeDeposit.bind(controller));
 router.get('/goals/:goalId/analytics', authenticate, controller.getGoalAnalytics.bind(controller));
 

@@ -15,6 +15,17 @@ export interface SavingsGoal {
   group?: any;
 }
 
+export type CreateSavingsGoalInput = {
+  name: string;
+  description?: string;
+  targetAmount: number;
+  currencyCode?: string;
+  targetDate?: string;
+  category: string;
+  isPublic?: boolean;
+  groupId: string;
+};
+
 export interface SavingsAnalytics {
   goal: Partial<SavingsGoal>;
   stats: {
@@ -35,7 +46,7 @@ export const savingsService = {
     return response.data;
   },
 
-  createGoal: async (data: Partial<SavingsGoal>) => {
+  createGoal: async (data: CreateSavingsGoalInput) => {
     const response = await api.post('/savings/goals', data);
     return response.data;
   },
@@ -70,6 +81,11 @@ export const savingsService = {
 
   reinvestFromSavings: async (goalId: string) => {
     const response = await api.post(`/savings/goals/${goalId}/reinvest`);
+    return response.data;
+  },
+
+  deleteGoal: async (goalId: string) => {
+    const response = await api.delete(`/savings/goals/${goalId}`);
     return response.data;
   },
 

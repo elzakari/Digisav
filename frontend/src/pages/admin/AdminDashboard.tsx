@@ -111,8 +111,16 @@ export function AdminDashboard() {
                     <span className="text-slate-200 font-medium">{group._count?.members || 0} / {group.maxMembers}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span>{t('common.contribution')}</span>
-                    <span className="text-slate-200 font-medium">{formatCurrency(group.contributionAmount, 0, group.currencyCode)}</span>
+                    <span>
+                      {group.groupType === 'MICRO_SAVINGS'
+                        ? String(t('dashboard.total_collected', { defaultValue: 'Total Collected' } as any))
+                        : t('common.contribution')}
+                    </span>
+                    <span className="text-slate-200 font-medium">
+                      {group.groupType === 'MICRO_SAVINGS'
+                        ? formatCurrency(group.totalCollected || 0, 0, group.currencyCode)
+                        : formatCurrency(group.contributionAmount, 0, group.currencyCode)}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span>{t('common.frequency')}</span>

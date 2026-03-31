@@ -7,7 +7,9 @@ export interface NetWorthSummary {
     personalSavings: number;
     investments: number;
   };
-  currencyCode: string;
+  currencyCode: string | null;
+  totalsByCurrency: Array<{ currencyCode: string; total: number }>;
+  multiCurrency: boolean;
 }
 
 export interface FinancialTrend {

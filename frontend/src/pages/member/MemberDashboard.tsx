@@ -85,8 +85,16 @@ function GroupCard({ group }: { group: any }) {
             <div className="space-y-5">
                 <div className="p-4 bg-white/[0.03] rounded-2xl border border-white/5 space-y-3">
                     <div className="flex justify-between items-center text-xs">
-                        <span className="text-slate-400 font-medium">{t('common.contribution')}</span>
-                        <span className="text-white font-bold">{formatCurrency(Number(group.contributionAmount))}</span>
+                        <span className="text-slate-400 font-medium">
+                          {group.groupType === 'MICRO_SAVINGS'
+                            ? String(t('dashboard.total_collected', { defaultValue: 'Total Collected' } as any))
+                            : t('common.contribution')}
+                        </span>
+                        <span className="text-white font-bold">
+                          {group.groupType === 'MICRO_SAVINGS'
+                            ? formatCurrency(Number(group.totalCollected || 0), 0, group.currencyCode)
+                            : formatCurrency(Number(group.contributionAmount || 0), 0, group.currencyCode)}
+                        </span>
                     </div>
                     <div className="flex justify-between items-center text-xs">
                         <span className="text-slate-400 font-medium">{t('common.frequency')}</span>
@@ -150,12 +158,17 @@ function MemberGlobalStats() {
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <StatCard title={t('dashboard.active_savings_groups')} value={stats?.totalActiveGroups || 0} type="info" />
-            <StatCard title={t('dashboard.total_saved_personal')} value={formatCurrency(stats?.totalAmountSaved || 0)} type="success" />
+            <StatCard
+              title={t('dashboard.total_saved_personal')}
+              value={formatCurrency(stats?.totalAmountSaved || 0, 0, stats?.currencyCode || 'KES')}
+              type="success"
+              hint={stats?.multiCurrency ? `+${Math.max(0, (stats?.totalsByCurrency?.length || 0) - 1)} more` : undefined}
+            />
         </div>
     );
 }
 
-function StatCard({ title, value, type = 'info' }: any) {
+function StatCard({ title, value, hint, type = 'info' }: any) {
     const styles: any = {
         info: 'from-indigo-500/20 to-transparent text-indigo-400 border-indigo-500/20',
         success: 'from-emerald-500/20 to-transparent text-emerald-400 border-emerald-500/20',
@@ -169,6 +182,9 @@ function StatCard({ title, value, type = 'info' }: any) {
                 <p className="text-3xl font-black text-white tracking-tight">
                     {typeof value === 'number' ? value.toLocaleString() : value}
                 </p>
+                {hint ? (
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-2">{hint}</span>
+                ) : null}
             </div>
         </div>
     );

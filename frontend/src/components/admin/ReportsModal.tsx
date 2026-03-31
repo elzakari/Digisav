@@ -213,266 +213,258 @@ export function ReportsModal({ isOpen, onClose, groupId }: ReportsModalProps) {
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
       {/* Modal Content */}
-      <div className="glass-card w-full max-w-xl p-6 relative border border-white/10 shadow-2xl overflow-hidden group">
+      <div className="glass-card w-full max-w-5xl relative border border-white/10 shadow-2xl overflow-hidden group flex flex-col max-h-[92vh]">
         <div className="absolute top-0 right-0 -mt-8 -mr-8 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl group-hover:bg-indigo-500/20 transition-all duration-700" />
         
         <button
-            onClick={onClose}
-            className="absolute top-5 right-5 text-slate-500 hover:text-white transition-all hover:scale-110 active:scale-95 z-10"
+          onClick={onClose}
+          className="absolute top-4 right-4 text-slate-500 hover:text-white transition-all hover:scale-110 active:scale-95 z-10"
         >
-            <X className="w-5 h-5" />
+          <X className="w-5 h-5" />
         </button>
 
-        <div className="mb-6 flex items-start gap-4">
+        <div className="px-5 pt-5 pb-4 border-b border-white/5">
+          <div className="flex items-start gap-3">
             <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl flex-shrink-0">
-                <Download className="w-6 h-6 text-indigo-400" />
+              <Download className="w-5 h-5 text-indigo-400" />
             </div>
             <div>
-                <h2 className="text-xl font-black text-white tracking-tight">{t('dashboard.export_report')}</h2>
-                <p className="text-slate-400 text-xs mt-0.5">{t('reports.export_config')}</p>
+              <h2 className="text-lg font-black text-white tracking-tight">{t('dashboard.export_report')}</h2>
+              <p className="text-slate-400 text-xs mt-0.5">{t('reports.export_config')}</p>
             </div>
+          </div>
         </div>
 
-        <div className="space-y-6">
-          {/* Report Type Selector */}
-          <div className="space-y-2">
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5 ml-1">
-              <LayoutDashboard className="w-3 h-3" />
-              {t('reports.type')}
-            </label>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {[
-                { id: 'contributions', label: t('reports.contributions'), icon: FileText, color: 'text-emerald-400' },
-                { id: 'payouts', label: t('reports.payouts'), icon: ArrowRightLeft, color: 'text-blue-400' },
-                { id: 'audit', label: t('reports.audit_summary'), icon: ShieldCheck, color: 'text-purple-400' }
-              ].map((type) => (
-                <button
-                  key={type.id}
-                  onClick={() => setReportType(type.id as any)}
-                  className={`flex flex-col items-center gap-2 p-3 text-center rounded-xl border transition-all duration-300 group ${
-                    reportType === type.id 
-                    ? 'bg-indigo-500/10 border-indigo-500/50 shadow-[0_0_15px_rgba(99,102,241,0.15)] ring-1 ring-indigo-500/50' 
-                    : 'bg-white/5 border-white/10 hover:border-white/20 hover:bg-white/10'
-                  }`}
-                >
-                  <div className={`p-2 rounded-lg transition-colors duration-300 ${
-                    reportType === type.id ? 'bg-indigo-500/20' : 'bg-slate-800'
-                  }`}>
-                    <type.icon className={`w-4 h-4 ${type.color}`} />
-                  </div>
-                  <p className={`text-xs font-bold transition-colors duration-300 ${
-                    reportType === type.id ? 'text-white' : 'text-slate-400 group-hover:text-slate-300'
-                  }`}>
-                    {type.label}
-                  </p>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            {/* Date Range Selector */}
-            <div className="space-y-1.5 focus-within:translate-x-1 transition-transform">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5 ml-1">
-                <Calendar className="w-3 h-3" />
-                {t('reports.period')}
-              </label>
-              <div className="relative group/select">
-                  <select
-                    value={dateRange}
-                    onChange={(e) => setDateRange(e.target.value as any)}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500/50 appearance-none transition-all group-hover/select:border-white/20"
-                  >
-                    <option value="this_month" className="bg-slate-900">{t('reports.this_month')}</option>
-                    <option value="last_month" className="bg-slate-900">{t('reports.last_month')}</option>
-                    <option value="custom" className="bg-slate-900">{t('reports.custom_range')}</option>
-                  </select>
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                  </div>
-              </div>
-            </div>
-
-            {/* Export Format Selector */}
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5 ml-1">
-                <FileType className="w-3 h-3" />
-                {t('reports.format')}
-              </label>
-              <div className="flex bg-white/5 p-1 rounded-xl border border-white/10">
-                <button
-                  onClick={() => setFormatType('pdf')}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold transition-all ${
-                    formatType === 'pdf' ? 'bg-indigo-500 text-white shadow-lg' : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <FileText className="w-3.5 h-3.5" />
-                  PDF
-                </button>
-                <button
-                  onClick={() => setFormatType('csv')}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold transition-all ${
-                    formatType === 'csv' ? 'bg-indigo-500 text-white shadow-lg' : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <TableIcon className="w-3.5 h-3.5" />
-                  CSV
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {canScopeToMember && (
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5 ml-1">
-                {t('reports.scope', 'Scope')}
-              </label>
-              <div className="relative group/select">
-                <select
-                  value={memberId}
-                  onChange={(e) => setMemberId(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500/50 appearance-none transition-all group-hover/select:border-white/20"
-                  disabled={isMembersLoading}
-                >
-                  <option value="" className="bg-slate-900">
-                    {t('reports.all_members', 'All members')}
-                  </option>
-                  {(members || []).map((m: any) => (
-                    <option key={m.id} value={m.id} className="bg-slate-900">
-                      {m.user?.fullName || m.id}
-                    </option>
+        <div className="flex-1 overflow-y-auto px-5 pb-4 pt-4">
+          <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-4">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5 ml-1">
+                  <LayoutDashboard className="w-3 h-3" />
+                  {t('reports.type')}
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: 'contributions', label: t('reports.contributions'), icon: FileText, color: 'text-emerald-400' },
+                    { id: 'payouts', label: t('reports.payouts'), icon: ArrowRightLeft, color: 'text-blue-400' },
+                    { id: 'audit', label: t('reports.audit_summary'), icon: ShieldCheck, color: 'text-purple-400' }
+                  ].map((type) => (
+                    <button
+                      key={type.id}
+                      onClick={() => setReportType(type.id as any)}
+                      className={`flex items-center justify-center gap-2 px-2.5 py-2 rounded-xl border transition-all duration-200 ${
+                        reportType === type.id
+                          ? 'bg-indigo-500/10 border-indigo-500/50 ring-1 ring-indigo-500/50'
+                          : 'bg-white/5 border-white/10 hover:border-white/20 hover:bg-white/10'
+                      }`}
+                    >
+                      <type.icon className={`w-4 h-4 ${type.color}`} />
+                      <span className={`text-[11px] font-bold whitespace-nowrap ${reportType === type.id ? 'text-white' : 'text-slate-300'}`}>{type.label}</span>
+                    </button>
                   ))}
-                </select>
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
                 </div>
               </div>
-              <div className="text-[10px] text-slate-500 ml-1">
-                {isMembersLoading ? t('common.loading', 'Loading...') : selectedMemberName ? `${t('reports.for_member', 'For')} ${selectedMemberName}` : t('reports.for_group', 'For the whole group')}
-              </div>
-            </div>
-          )}
 
-          <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 flex items-start justify-between gap-4">
-            <div className="space-y-0.5">
-              <div className="text-xs font-bold text-white">{t('reports.summary', 'Summary')}</div>
-              <div className="text-[10px] text-slate-400">
-                {t('reports.period', 'Time Period')}: {derivedPeriod.label}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5 ml-1">
+                    <Calendar className="w-3 h-3" />
+                    {t('reports.period')}
+                  </label>
+                  <div className="relative group/select">
+                    <select
+                      value={dateRange}
+                      onChange={(e) => setDateRange(e.target.value as any)}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500/50 appearance-none transition-all group-hover/select:border-white/20"
+                    >
+                      <option value="this_month" className="bg-slate-900">{t('reports.this_month')}</option>
+                      <option value="last_month" className="bg-slate-900">{t('reports.last_month')}</option>
+                      <option value="custom" className="bg-slate-900">{t('reports.custom_range')}</option>
+                    </select>
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5 ml-1">
+                    <FileType className="w-3 h-3" />
+                    {t('reports.format')}
+                  </label>
+                  <div className="flex bg-white/5 p-1 rounded-xl border border-white/10">
+                    <button
+                      onClick={() => setFormatType('pdf')}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all ${
+                        formatType === 'pdf' ? 'bg-indigo-500 text-white shadow-lg' : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      PDF
+                    </button>
+                    <button
+                      onClick={() => setFormatType('csv')}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all ${
+                        formatType === 'csv' ? 'bg-indigo-500 text-white shadow-lg' : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <TableIcon className="w-3.5 h-3.5" />
+                      CSV
+                    </button>
+                  </div>
+                </div>
               </div>
-              <div className="text-[10px] text-slate-400">
-                {t('reports.format', 'Format')}: {formatType.toUpperCase()} · {t(`reports.${reportType}`)}
-              </div>
+
+              {dateRange === 'custom' ? (
+                <div className="grid grid-cols-2 gap-3 animate-in slide-in-from-top-2 duration-300">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">{t('common.start_date')}</label>
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500/50 transition-all"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">{t('common.end_date')}</label>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500/50 transition-all"
+                    />
+                  </div>
+                </div>
+              ) : null}
+
+              {canScopeToMember ? (
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5 ml-1">
+                    {t('reports.scope', 'Scope')}
+                  </label>
+                  <div className="relative group/select">
+                    <select
+                      value={memberId}
+                      onChange={(e) => setMemberId(e.target.value)}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500/50 appearance-none transition-all group-hover/select:border-white/20"
+                      disabled={isMembersLoading}
+                    >
+                      <option value="" className="bg-slate-900">
+                        {t('reports.all_members', 'All members')}
+                      </option>
+                      {(members || []).map((m: any) => (
+                        <option key={m.id} value={m.id} className="bg-slate-900">
+                          {m.user?.fullName || m.id}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div className="text-[10px] text-slate-500 ml-1">
+                    {isMembersLoading ? t('common.loading', 'Loading...') : selectedMemberName ? `${t('reports.for_member', 'For')} ${selectedMemberName}` : t('reports.for_group', 'For the whole group')}
+                  </div>
+                </div>
+              ) : null}
             </div>
-            {shareLink ? (
-              <button
-                onClick={handleCopyLink}
-                className="px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 transition-colors text-[10px] font-bold text-slate-200"
-              >
-                {t('reports.copy_link', 'Copy link')}
-              </button>
-            ) : null}
+
+            <div className="space-y-3">
+              <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 flex items-start justify-between gap-4">
+                <div className="space-y-0.5 min-w-0">
+                  <div className="text-xs font-bold text-white">{t('reports.summary', 'Summary')}</div>
+                  <div className="text-[10px] text-slate-400 truncate">{t('reports.period', 'Time Period')}: {derivedPeriod.label}</div>
+                  <div className="text-[10px] text-slate-400 truncate">{t('reports.format', 'Format')}: {formatType.toUpperCase()} · {t(`reports.${reportType}`)}{selectedMemberName ? ` · ${selectedMemberName}` : ''}</div>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {shareLink ? (
+                    <button
+                      onClick={handleCopyLink}
+                      className="px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 transition-colors text-[10px] font-bold text-slate-200"
+                    >
+                      {t('reports.copy_link', 'Copy link')}
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => setShowPreview((v) => !v)}
+                    className="px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 transition-colors text-[10px] font-bold text-slate-200"
+                  >
+                    {showPreview ? t('common.hide', 'Hide') : t('common.show', 'Show')}
+                  </button>
+                </div>
+              </div>
+
+              {showPreview ? (
+                previewQuery.isLoading ? (
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-8 flex items-center justify-center gap-2 text-slate-300">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="text-sm font-semibold">{t('common.loading', 'Loading...')}</span>
+                  </div>
+                ) : previewQuery.isError ? (
+                  <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-200">
+                    {t('reports.preview_failed', 'Could not load preview. You can still download the report.')}
+                  </div>
+                ) : previewQuery.data?.headers?.length ? (
+                  <ReportPreviewTable
+                    title={t('reports.preview_table_title', 'Report Table')}
+                    subtitle={`${t('reports.period', 'Time Period')}: ${derivedPeriod.label} · ${t(`reports.${reportType}`)}${selectedMemberName ? ` · ${t('reports.for_member', 'For')} ${selectedMemberName}` : ''}`}
+                    headers={previewQuery.data.headers}
+                    rows={previewQuery.data.rows}
+                    isTruncated={previewQuery.data.truncated}
+                  />
+                ) : (
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-slate-400">
+                    {t('reports.no_preview', 'No preview available for this selection.')}
+                  </div>
+                )
+              ) : null}
+            </div>
           </div>
-
-          <div className="flex items-center justify-between gap-3">
-            <div className="text-xs font-bold text-white">{t('reports.preview', 'Preview')}</div>
-            <button
-              type="button"
-              onClick={() => setShowPreview((v) => !v)}
-              className="px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 transition-colors text-[10px] font-bold text-slate-200"
-            >
-              {showPreview ? t('common.hide', 'Hide') : t('common.show', 'Show')}
-            </button>
-          </div>
-
-          {showPreview ? (
-            previewQuery.isLoading ? (
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-8 flex items-center justify-center gap-2 text-slate-300">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span className="text-sm font-semibold">{t('common.loading', 'Loading...')}</span>
-              </div>
-            ) : previewQuery.isError ? (
-              <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-200">
-                {t('reports.preview_failed', 'Could not load preview. You can still download the report.')}
-              </div>
-            ) : previewQuery.data?.headers?.length ? (
-              <ReportPreviewTable
-                title={t('reports.preview_table_title', 'Report Table')}
-                subtitle={`${t('reports.period', 'Time Period')}: ${derivedPeriod.label} · ${t(`reports.${reportType}`)}${selectedMemberName ? ` · ${t('reports.for_member', 'For')} ${selectedMemberName}` : ''}`}
-                headers={previewQuery.data.headers}
-                rows={previewQuery.data.rows}
-                isTruncated={previewQuery.data.truncated}
-              />
-            ) : (
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-slate-400">
-                {t('reports.no_preview', 'No preview available for this selection.')}
-              </div>
-            )
-          ) : null}
-
-          {/* Custom Date Selection */}
-          {dateRange === 'custom' && (
-            <div className="grid grid-cols-2 gap-4 animate-in slide-in-from-top-2 duration-300">
-              <div className="space-y-1.5 focus-within:translate-x-1 transition-transform">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">{t('common.start_date')}</label>
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500/50 transition-all"
-                />
-              </div>
-              <div className="space-y-1.5 focus-within:translate-x-1 transition-transform">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">{t('common.end_date')}</label>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500/50 transition-all"
-                />
-              </div>
-            </div>
-          )}
         </div>
 
-        <div className="mt-8 flex flex-col gap-3">
-          <div className="flex gap-3">
+        <div className="px-5 pb-5 pt-4 border-t border-white/5 bg-slate-950/20 backdrop-blur-sm">
+          <div className="flex flex-col gap-3">
+            <div className="flex gap-3">
+              <button
+                onClick={onClose}
+                className="flex-1 px-4 py-3 rounded-xl bg-white/5 text-slate-300 text-sm font-bold hover:bg-white/10 hover:text-white transition-all border border-white/5 text-center"
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                onClick={handleGenerate}
+                disabled={isGeneratingDownload || isGeneratingShare}
+                className="flex-1 bg-indigo-500 hover:bg-indigo-400 disabled:bg-indigo-500/50 px-4 py-3 rounded-xl text-white text-sm font-bold shadow-lg shadow-indigo-500/25 transition-all text-center flex items-center justify-center gap-2 group"
+              >
+                {isGeneratingDownload ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    {t('common.processing')}
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4 group-hover:-translate-y-0.5 transition-transform" />
+                    {t('reports.generate')}
+                  </>
+                )}
+              </button>
+            </div>
+
             <button
-              onClick={onClose}
-              className="flex-1 px-4 py-3 rounded-xl bg-white/5 text-slate-300 text-sm font-bold hover:bg-white/10 hover:text-white transition-all border border-white/5 text-center"
-            >
-              {t('common.cancel')}
-            </button>
-            <button
-              onClick={handleGenerate}
+              onClick={handleWhatsAppShare}
               disabled={isGeneratingDownload || isGeneratingShare}
-              className="flex-1 bg-indigo-500 hover:bg-indigo-400 disabled:bg-indigo-500/50 px-4 py-3 rounded-xl text-white text-sm font-bold shadow-lg shadow-indigo-500/25 transition-all text-center flex items-center justify-center gap-2 group"
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-[#25D366]/10 text-[#25D366] text-sm font-bold border border-[#25D366]/20 hover:bg-[#25D366]/20 transition-all group"
             >
-              {isGeneratingDownload ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  {t('common.processing')}
-                </>
-              ) : (
-                <>
-                  <Download className="w-4 h-4 group-hover:-translate-y-0.5 transition-transform" />
-                  {t('reports.generate')}
-                </>
-              )}
+              <MessageCircle className="w-4 h-4 group-hover:scale-110 transition-transform" />
+              {isGeneratingShare ? t('common.processing') : t('reports.share_whatsapp')}
             </button>
           </div>
-          
-          <button
-            onClick={handleWhatsAppShare}
-            disabled={isGeneratingDownload || isGeneratingShare}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-[#25D366]/10 text-[#25D366] text-sm font-bold border border-[#25D366]/20 hover:bg-[#25D366]/20 transition-all group"
-          >
-            <MessageCircle className="w-4 h-4 group-hover:scale-110 transition-transform" />
-            {isGeneratingShare ? t('common.processing') : t('reports.share_whatsapp')}
-          </button>
         </div>
       </div>
     </div>

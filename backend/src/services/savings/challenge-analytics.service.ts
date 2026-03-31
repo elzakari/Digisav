@@ -95,6 +95,12 @@ export class SavingsAnalyticsService {
    * Calculate savings summary for a user over a period
    */
   async getUserSummary(userId: string, periodStart: Date, periodEnd: Date) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { defaultCurrency: true },
+    });
+    const preferredCurrency = user?.defaultCurrency || 'KES';
+
     const deposits = await prisma.savingsDeposit.findMany({
       where: {
         userId,
@@ -103,11 +109,50 @@ export class SavingsAnalyticsService {
           lte: periodEnd,
         },
       },
+      select: { amount: true, depositDate: true },
     });
 
-    const totalSaved = deposits.reduce((sum, d) => sum + Number(d.amount), 0);
+    const totalsByCurrency = await prisma.savingsGoal.groupBy({
+      by: ['currencyCode'],
+      where: {
+        userId,
+        status: { in: ['ACTIVE', 'PAUSED', 'COMPLETED'] },
+        group: {
+          is: {
+            groupType: 'MICRO_SAVINGS',
+            status: 'ACTIVE',
+          },
+        },
+      },
+      _sum: { currentAmount: true },
+    });
+
+    const normalizedTotalsByCurrency = (totalsByCurrency || [])
+      .map((t) => ({ currencyCode: t.currencyCode, total: Number(t._sum.currentAmount || 0) }))
+      .filter((t) => t.total !== 0)
+      .sort((a, b) => b.total - a.total);
+
+    const currencyCode = normalizedTotalsByCurrency.some((t) => t.currencyCode === preferredCurrency)
+      ? preferredCurrency
+      : normalizedTotalsByCurrency.length === 1
+        ? normalizedTotalsByCurrency[0].currencyCode
+        : null;
+
+    const totalSaved = currencyCode
+      ? (normalizedTotalsByCurrency.find((t) => t.currencyCode === currencyCode)?.total || 0)
+      : 0;
+
     const goalCount = await prisma.savingsGoal.count({
-      where: { userId, status: 'ACTIVE' },
+      where: {
+        userId,
+        status: 'ACTIVE',
+        group: {
+          is: {
+            groupType: 'MICRO_SAVINGS',
+            status: 'ACTIVE',
+          },
+        },
+      },
     });
 
     const completedGoals = await prisma.savingsGoal.count({
@@ -115,6 +160,12 @@ export class SavingsAnalyticsService {
         userId,
         status: 'COMPLETED',
         updatedAt: { gte: periodStart, lte: periodEnd },
+        group: {
+          is: {
+            groupType: 'MICRO_SAVINGS',
+            status: 'ACTIVE',
+          },
+        },
       },
     });
 
@@ -127,6 +178,9 @@ export class SavingsAnalyticsService {
       completedInPeriod: completedGoals,
       depositCount: deposits.length,
       currentStreak: streak,
+      currencyCode,
+      totalsByCurrency: normalizedTotalsByCurrency,
+      multiCurrency: normalizedTotalsByCurrency.length > 1,
     };
   }
 

@@ -29,7 +29,6 @@ export class SavingsController {
   
   async createGoal(req: Request, res: Response, next: NextFunction) {
     try {
-      if (!this.checkFeature(req, res)) return;
       const userId = (req as any).user.id;
       const goal = await this.goalService.createGoal(userId, req.body);
       res.status(201).json({ success: true, data: goal });
@@ -40,7 +39,6 @@ export class SavingsController {
 
   async getMyGoals(req: Request, res: Response, next: NextFunction) {
     try {
-      if (!this.checkFeature(req, res)) return;
       const userId = (req as any).user.id;
       const goals = await this.goalService.getGoalsByUser(userId);
       res.status(200).json({ success: true, data: goals }); 
@@ -49,9 +47,19 @@ export class SavingsController {
     }
   }
 
+  async deleteGoal(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req as any).user.id;
+      const goalId = req.params.goalId as string;
+      const result = await this.goalService.deleteOrphanGoal(goalId, userId);
+      res.status(200).json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async makeDeposit(req: Request, res: Response, next: NextFunction) {
     try {
-      if (!this.checkFeature(req, res)) return;
       const userId = (req as any).user.id;
       const goalId = req.params.goalId as string;
       const { amount } = req.body;
@@ -64,7 +72,6 @@ export class SavingsController {
 
   async getGoalAnalytics(req: Request, res: Response, next: NextFunction) {
     try {
-      if (!this.checkFeature(req, res)) return;
       const userId = (req as any).user.id;
       const goalId = req.params.goalId as string;
       const analytics = await this.goalService.getGoalAnalytics(goalId, userId);
@@ -78,7 +85,6 @@ export class SavingsController {
 
   async createRoundUp(req: Request, res: Response, next: NextFunction) {
     try {
-      if (!this.checkFeature(req, res)) return;
       const userId = (req as any).user.id;
       const { goalId, roundUpTo } = req.body;
       const automation = await this.automationService.createRoundUpRule(userId, goalId, roundUpTo);
@@ -92,7 +98,6 @@ export class SavingsController {
 
   async joinChallenge(req: Request, res: Response, next: NextFunction) {
     try {
-      if (!this.checkFeature(req, res)) return;
       const userId = (req as any).user.id;
       const challengeId = req.params.challengeId as string;
       const { savingsGoalId } = req.body;
@@ -107,7 +112,6 @@ export class SavingsController {
 
   async getSummary(req: Request, res: Response, next: NextFunction) {
     try {
-      if (!this.checkFeature(req, res)) return;
       const userId = (req as any).user.id;
       const summary = await this.analyticsService.getUserSummary(userId, new Date(Date.now() - 30*24*60*60*1000), new Date());
       res.status(200).json({ success: true, data: summary });

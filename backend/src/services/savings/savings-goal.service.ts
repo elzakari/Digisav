@@ -2,6 +2,7 @@ import { SavingsGoalStatus, TransactionType } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { LedgerService } from '@/services/ledger/ledger.service';
 import { NotificationService } from '@/services/notifications/notification.service';
+import { NotFoundError, ValidationError } from '@/utils/errors';
 
 export class SavingsGoalService {
   private ledgerService = new LedgerService();
@@ -22,21 +23,42 @@ export class SavingsGoalService {
   }) {
     // Validation
     if (data.targetAmount <= 0) {
-      throw new Error('Target amount must be greater than 0');
+      throw new ValidationError('Target amount must be greater than 0');
     }
 
     if (data.targetDate && new Date(data.targetDate) < new Date()) {
-      throw new Error('Target date cannot be in the past');
+      throw new ValidationError('Target date cannot be in the past');
     }
 
-    let currencyCode = data.currencyCode;
-    if (!currencyCode && data.groupId) {
-      const group = await prisma.group.findUnique({
-        where: { id: data.groupId },
-        select: { currencyCode: true },
-      });
-      currencyCode = group?.currencyCode;
+    if (!data.groupId) {
+      throw new ValidationError('A Micro‑Savings group is required to create a goal');
     }
+
+    const group = await prisma.group.findUnique({
+      where: { id: data.groupId },
+      select: { id: true, groupType: true, status: true, currencyCode: true },
+    });
+    if (!group) throw new NotFoundError('Group');
+    if (group.groupType !== 'MICRO_SAVINGS') {
+      throw new ValidationError('Goals must be linked to a Micro‑Savings group');
+    }
+    if (group.status !== 'ACTIVE') {
+      throw new ValidationError('Micro‑Savings group must be active to create goals');
+    }
+
+    const membership = await prisma.member.findFirst({
+      where: {
+        groupId: group.id,
+        userId,
+        status: 'ACTIVE',
+      },
+      select: { id: true },
+    });
+    if (!membership) {
+      throw new ValidationError('You must be an active member of this Micro‑Savings group');
+    }
+
+    const currencyCode = group.currencyCode || 'KES';
 
     // Create goal
     const goal = await prisma.savingsGoal.create({
@@ -48,10 +70,10 @@ export class SavingsGoalService {
         targetDate: data.targetDate ? new Date(data.targetDate) : null,
         category: data.category,
         isPublic: data.isPublic || false,
-        currencyCode: currencyCode || 'KES',
+        currencyCode,
         status: 'ACTIVE',
         currentAmount: 0,
-        groupId: data.groupId || null,
+        groupId: data.groupId,
       },
     });
 
@@ -277,5 +299,50 @@ export class SavingsGoalService {
         createdAt: 'desc',
       },
     });
+  }
+
+  async deleteOrphanGoal(goalId: string, userId: string) {
+    const goal = await prisma.savingsGoal.findUnique({
+      where: { id: goalId },
+      include: { group: { select: { id: true, groupType: true, status: true } } },
+    });
+    if (!goal) throw new NotFoundError('Savings goal');
+    if (goal.userId !== userId) throw new ValidationError('Not allowed');
+
+    const groupOrphan =
+      !goal.groupId ||
+      !goal.group ||
+      goal.group.groupType !== 'MICRO_SAVINGS' ||
+      goal.group.status !== 'ACTIVE';
+
+    let membershipOrphan = false;
+    if (!groupOrphan && goal.groupId) {
+      const membership = await prisma.member.findFirst({
+        where: { groupId: goal.groupId, userId, status: 'ACTIVE' },
+        select: { id: true },
+      });
+      membershipOrphan = !membership;
+    }
+
+    if (!groupOrphan && !membershipOrphan) {
+      throw new ValidationError('Only orphan goals can be deleted');
+    }
+
+    await prisma.$transaction([
+      prisma.withdrawalRequest.deleteMany({ where: { savingsGoalId: goalId } }),
+      prisma.savingsDeposit.deleteMany({ where: { savingsGoalId: goalId } }),
+      prisma.savingsAutomation.deleteMany({ where: { savingsGoalId: goalId } }),
+      prisma.challengeParticipation.updateMany({
+        where: { savingsGoalId: goalId },
+        data: { savingsGoalId: null },
+      }),
+      prisma.investmentTransaction.updateMany({
+        where: { savingsGoalId: goalId },
+        data: { savingsGoalId: null },
+      }),
+      prisma.savingsGoal.delete({ where: { id: goalId } }),
+    ]);
+
+    return { success: true };
   }
 }

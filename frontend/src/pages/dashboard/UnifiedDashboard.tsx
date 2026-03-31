@@ -40,6 +40,9 @@ export function UnifiedDashboard() {
   const current = summary?.current;
   const trends = summary?.trends || [];
 
+  const primaryCurrency = current?.currencyCode || undefined;
+  const extraCurrencies = current?.multiCurrency ? Math.max(0, (current?.totalsByCurrency?.length || 0) - 1) : 0;
+
   return (
     <div className="max-w-7xl mx-auto space-y-10 py-6 animate-fade-in">
       {/* Header */}
@@ -75,8 +78,11 @@ export function UnifiedDashboard() {
             <div className="space-y-1 text-center lg:text-left">
               <p className="text-sm font-bold uppercase tracking-[0.2em] text-slate-400">{t('dashboard.combined_net_value')}</p>
               <h1 className="text-6xl md:text-7xl font-black text-white tracking-tighter">
-                {formatCurrency(current?.totalNetWorth || 0)}
+                {formatCurrency(current?.totalNetWorth || 0, 0, primaryCurrency)}
               </h1>
+              {extraCurrencies ? (
+                <div className="mt-2 text-[10px] font-bold uppercase tracking-widest text-slate-500">+{extraCurrencies} more</div>
+              ) : null}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-10 border-t border-white/5">
@@ -85,7 +91,7 @@ export function UnifiedDashboard() {
                   <div className="w-2 h-2 rounded-full bg-blue-500" /> {t('dashboard.group_equity')}
                 </div>
                 <p className="text-2xl font-black text-white">
-                  {formatCurrency(current?.breakdown.groupContributions || 0)}
+                  {formatCurrency(current?.breakdown.groupContributions || 0, 0, primaryCurrency)}
                 </p>
               </div>
               <div className="space-y-2">
@@ -93,7 +99,7 @@ export function UnifiedDashboard() {
                   <div className="w-2 h-2 rounded-full bg-emerald-500" /> {t('dashboard.personal_savings')}
                 </div>
                 <p className="text-2xl font-black text-white">
-                  {formatCurrency(current?.breakdown.personalSavings || 0)}
+                  {formatCurrency(current?.breakdown.personalSavings || 0, 0, primaryCurrency)}
                 </p>
               </div>
               <div className="space-y-2">
@@ -101,7 +107,7 @@ export function UnifiedDashboard() {
                   <div className="w-2 h-2 rounded-full bg-indigo-500" /> {t('dashboard.investments_label')}
                 </div>
                 <p className="text-2xl font-black text-white">
-                  {formatCurrency(current?.breakdown.investments || 0)}
+                  {formatCurrency(current?.breakdown.investments || 0, 0, primaryCurrency)}
                 </p>
               </div>
             </div>

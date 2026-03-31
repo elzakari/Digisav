@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 import React from 'react';
 import GoalCard from '@/components/savings/GoalCard';
 import { formatCurrency } from '@/utils/currencyFormatter';
+import { Trash2 } from 'lucide-react';
 
 export function SavingsGoals() {
   const { t } = useTranslation();
@@ -43,6 +44,29 @@ export function SavingsGoals() {
     queryKey: ['savings-goals'],
     queryFn: () => savingsService.getGoals(),
   });
+
+  const allGoals = goals?.data || [];
+  const orphanGoals = allGoals.filter((g: any) => {
+    if (!g.groupId) return true;
+    if (!g.group) return true;
+    if (g.group.groupType !== 'MICRO_SAVINGS') return true;
+    if (g.group.status !== 'ACTIVE') return true;
+    return false;
+  });
+  const validGoals = allGoals.filter((g: any) => !orphanGoals.some((o: any) => o.id === g.id));
+
+  const handleDeleteOrphan = async (goal: any) => {
+    const ok = window.confirm(`Delete orphan goal "${goal.name}"? This cannot be undone.`);
+    if (!ok) return;
+    try {
+      await savingsService.deleteGoal(goal.id);
+      queryClient.invalidateQueries({ queryKey: ['savings-goals'] });
+      queryClient.invalidateQueries({ queryKey: ['savings-summary'] });
+    } catch (e) {
+      console.error('Failed to delete goal', e);
+      alert('Could not delete this goal.');
+    }
+  };
 
   if (isSummaryLoading || isGoalsLoading) {
     return (
@@ -89,8 +113,13 @@ export function SavingsGoals() {
         <div className="glass-card p-6 bg-gradient-to-br from-blue-500/10 to-transparent border border-blue-500/20 rounded-2xl">
           <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4">{t('savings.total_personal_savings')}</h3>
           <div className="text-3xl font-black text-white">
-            {formatCurrency(Number(summary?.data?.totalSaved || 0))}
+            {formatCurrency(Number(summary?.data?.totalSaved || 0), 0, summary?.data?.currencyCode || undefined)}
           </div>
+          {summary?.data?.multiCurrency ? (
+            <div className="mt-1 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+              +{Math.max(0, (summary?.data?.totalsByCurrency?.length || 0) - 1)} more
+            </div>
+          ) : null}
         </div>
         <div className="glass-card p-6 bg-gradient-to-br from-emerald-500/10 to-transparent border border-emerald-500/20 rounded-2xl">
           <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4">{t('savings.active_goals')}</h3>
@@ -112,8 +141,57 @@ export function SavingsGoals() {
           <h2 className="text-2xl font-semibold text-slate-200 uppercase tracking-tight">{t('savings.your_goals')}</h2>
         </div>
 
+        {orphanGoals.length ? (
+          <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <div className="text-xs font-black uppercase tracking-widest text-amber-200">Orphan goals</div>
+                <div className="text-[11px] text-amber-100/70 mt-1">
+                  These goals are no longer linked to an active Micro‑Savings group. You can delete them to keep your dashboard clean.
+                </div>
+              </div>
+              <div className="text-xs font-bold text-amber-200">{orphanGoals.length}</div>
+            </div>
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {orphanGoals.map((goal: any) => (
+                <div key={goal.id} className="relative overflow-hidden group transition-all duration-300">
+                  <div className="absolute inset-0 bg-white/10 backdrop-blur-md border border-amber-500/20 rounded-2xl shadow-xl z-0" />
+                  <div className="relative z-10 p-6 flex flex-col h-full">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-amber-200 bg-amber-500/10 border border-amber-500/20 rounded-full px-3 py-1 inline-flex">
+                          Orphan
+                        </div>
+                        <h3 className="mt-3 text-lg font-black text-white truncate">{goal.name}</h3>
+                        <p className="text-white/60 text-sm mt-1 line-clamp-2">{goal.description || t('savings.no_desc')}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteOrphan(goal)}
+                        className="p-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-rose-300 hover:text-rose-200 transition-colors"
+                        title="Delete orphan goal"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <div className="mt-6">
+                      <div className="text-2xl font-black text-white">
+                        {formatCurrency(goal.currentAmount, 0, goal.currencyCode)}
+                      </div>
+                      <div className="text-white/40 text-xs font-medium mt-1">
+                        {t('savings.saved_of')} {formatCurrency(goal.targetAmount, 0, goal.currencyCode)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {goals?.data?.length === 0 ? (
+          {validGoals.length === 0 ? (
             <div className="col-span-full py-20 text-center glass-card rounded-2xl border-dashed">
               <div className="w-20 h-20 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-blue-500/20">
                 <svg className="w-10 h-10 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -130,7 +208,7 @@ export function SavingsGoals() {
               </Link>
             </div>
           ) : (
-            goals?.data?.map((goal: any) => (
+            validGoals.map((goal: any) => (
               <GoalCard key={goal.id} goal={goal} />
             ))
           )}

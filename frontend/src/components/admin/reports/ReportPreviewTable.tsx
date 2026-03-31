@@ -76,7 +76,7 @@ export function ReportPreviewTable({ title, subtitle, headers, rows, isTruncated
         </div>
       </div>
 
-      <div className="overflow-x-auto no-scrollbar">
+      <div className="overflow-auto no-scrollbar max-h-[46vh]">
         <table className="w-full text-left border-collapse">
           <thead className="bg-white/[0.03]">
             <tr>

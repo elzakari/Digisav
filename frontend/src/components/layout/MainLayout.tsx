@@ -4,7 +4,7 @@ import { NotificationBell } from '@/components/common/NotificationBell';
 import { authService } from '@/services/auth.service';
 import { useTranslation } from 'react-i18next';
 import { LanguageSwitcher } from '@/components/common/LanguageSwitcher';
-import { LogOut, Menu, X } from 'lucide-react';
+import { ChevronDown, LogOut, Menu, X } from 'lucide-react';
 import { SafeLink } from '@/components/common/SafeLink';
 import { useProductNavStore } from '@/store/productNav.store';
 
@@ -20,6 +20,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     const [mobileNavOpen, setMobileNavOpen] = React.useState(false);
     const product = useProductNavStore((s) => s.product);
     const setProduct = useProductNavStore((s) => s.setProduct);
+    const [platformMenuOpen, setPlatformMenuOpen] = React.useState(false);
  
     React.useEffect(() => {
         if (user?.theme) {
@@ -34,6 +35,15 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     React.useEffect(() => {
         setMobileNavOpen(false);
     }, [location.pathname]);
+
+    React.useEffect(() => {
+        if (!platformMenuOpen) return;
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') setPlatformMenuOpen(false);
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [platformMenuOpen]);
 
     React.useEffect(() => {
         const p = location.pathname;
@@ -67,58 +77,77 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
         const items: Array<{ to: string; label: string; active: (path: string) => boolean }> = [];
 
-        if (user.role === 'SYS_ADMIN') {
+        const isSystemAdmin = user.role === 'SYS_ADMIN';
+        const isGroupAdmin = user.role === 'ADMIN';
+
+        if (isSystemAdmin) {
+            items.push({
+                to: '/sysadmin/dashboard',
+                label: String(t('nav.platform_overview', { defaultValue: 'Platform Overview' } as any)),
+                active: (p) => p.includes('/sysadmin/dashboard'),
+            });
             items.push({
                 to: '/sysadmin/users',
-                label: 'Users Directory',
+                label: String(t('nav.users_directory', { defaultValue: 'Users Directory' } as any)),
                 active: (p) => p.includes('/sysadmin/users') || p.includes('/users'),
             });
             items.push({
                 to: '/sysadmin/groups',
-                label: 'Groups Moderation',
+                label: String(t('nav.groups_moderation', { defaultValue: 'Groups Moderation' } as any)),
                 active: (p) => p.includes('/sysadmin/groups'),
             });
-        } else {
-            if (product === 'group') {
-                if (user.role === 'MEMBER') {
-                    items.push({
-                        to: '/overview',
-                        label: 'Overview',
-                        active: (p) => p === '/overview',
-                    });
-                }
+            items.push({
+                to: '/admin/groups/audit',
+                label: String(t('nav.audit', { defaultValue: 'Audit' } as any)),
+                active: (p) => p.includes('/admin/groups/audit'),
+            });
+            items.push({
+                to: '/settings',
+                label: t('common.settings'),
+                active: (p) => p.includes('/settings'),
+            });
+            return items;
+        }
 
+        if (product === 'group') {
+            if (user.role === 'MEMBER') {
                 items.push({
-                    to: user.role === 'ADMIN' ? '/admin/dashboard' : '/member/dashboard',
-                    label: t('common.dashboard'),
-                    active: (p) => p.includes('/dashboard') && !p.includes('/sysadmin'),
-                });
-
-                items.push({
-                    to: user.role === 'ADMIN' ? '/admin/calendar' : '/member/calendar',
-                    label: t('common.calendar'),
-                    active: (p) => p.includes('/calendar'),
-                });
-
-                if (user.role === 'ADMIN') {
-                    items.push({
-                        to: '/admin/groups/audit',
-                        label: 'Audit',
-                        active: (p) => p.includes('/admin/groups/audit'),
-                    });
-                }
-            } else {
-                items.push({
-                    to: '/savings',
-                    label: 'Savings',
-                    active: (p) => p.includes('/savings'),
-                });
-                items.push({
-                    to: '/investments',
-                    label: 'Investments',
-                    active: (p) => p.includes('/investments'),
+                    to: '/overview',
+                    label: 'Overview',
+                    active: (p) => p === '/overview',
                 });
             }
+
+            items.push({
+                to: isSystemAdmin || isGroupAdmin ? '/admin/dashboard' : '/member/dashboard',
+                label: t('common.dashboard'),
+                active: (p) => p.includes('/dashboard') && !p.includes('/sysadmin'),
+            });
+
+            items.push({
+                to: isSystemAdmin || isGroupAdmin ? '/admin/calendar' : '/member/calendar',
+                label: t('common.calendar'),
+                active: (p) => p.includes('/calendar'),
+            });
+
+            if (isSystemAdmin || isGroupAdmin) {
+                items.push({
+                    to: '/admin/groups/audit',
+                    label: 'Audit',
+                    active: (p) => p.includes('/admin/groups/audit'),
+                });
+            }
+        } else {
+            items.push({
+                to: '/savings',
+                label: 'Savings',
+                active: (p) => p.includes('/savings'),
+            });
+            items.push({
+                to: '/investments',
+                label: 'Investments',
+                active: (p) => p.includes('/investments'),
+            });
         }
 
         items.push({
@@ -130,7 +159,16 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         return items;
     }, [product, t, user]);
 
-    const canSwitchProduct = !!user && user.role !== 'SYS_ADMIN';
+    const isPlatformAdmin = user?.role === 'SYS_ADMIN';
+    const canSwitchProduct = !!user && !isPlatformAdmin;
+
+    const brandHref = !user
+        ? '/login'
+        : user.role === 'SYS_ADMIN'
+            ? '/sysadmin/dashboard'
+            : user.role === 'MEMBER'
+                ? '/overview'
+                : '/admin/dashboard';
 
     return (
         <div className="min-h-screen w-full relative overflow-x-hidden flex flex-col">
@@ -151,9 +189,15 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                                 <Menu className="w-5 h-5" />
                             </button>
 
-                            <SafeLink to={user.role === 'SYS_ADMIN' ? '/sysadmin/dashboard' : user.role === 'ADMIN' ? '/admin/dashboard' : '/overview'} className="text-xl font-black text-white tracking-tight" auditLabel="Brand">
+                            <SafeLink to={brandHref} className="text-xl font-black text-white tracking-tight" auditLabel="Brand">
                                 Germ<span className="text-indigo-400">inos</span>
                             </SafeLink>
+
+                            {isPlatformAdmin ? (
+                                <span className="hidden md:inline-flex items-center px-3 py-1.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-[10px] font-black uppercase tracking-widest text-indigo-200">
+                                    {String(t('nav.platform', { defaultValue: 'Platform' } as any))}
+                                </span>
+                            ) : null}
 
                             {canSwitchProduct && (
                                 <div className="hidden md:flex items-center p-1 rounded-2xl bg-white/[0.03] border border-white/10">
@@ -201,6 +245,36 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                         </div>
 
                         <div className="flex items-center gap-4">
+                            {isPlatformAdmin ? (
+                                <div className="relative hidden md:block">
+                                    <button
+                                        type="button"
+                                        onClick={() => setPlatformMenuOpen((v) => !v)}
+                                        className="px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors text-xs font-bold text-slate-200 flex items-center gap-2"
+                                    >
+                                        {String(t('nav.quick_actions', { defaultValue: 'Quick' } as any))}
+                                        <ChevronDown className="w-4 h-4 text-slate-400" />
+                                    </button>
+                                    {platformMenuOpen ? (
+                                        <div className="absolute right-0 top-11 z-50 w-56 bg-slate-950/95 border border-white/10 rounded-xl overflow-hidden shadow-2xl">
+                                            {[{ to: '/sysadmin/users', label: String(t('nav.users_directory', { defaultValue: 'Users Directory' } as any)) },
+                                              { to: '/sysadmin/groups', label: String(t('nav.groups_moderation', { defaultValue: 'Groups Moderation' } as any)) },
+                                              { to: '/admin/groups/audit', label: String(t('nav.audit', { defaultValue: 'Audit' } as any)) },
+                                              { to: '/settings', label: t('common.settings') }].map((x) => (
+                                                <SafeLink
+                                                    key={x.to}
+                                                    to={x.to}
+                                                    auditLabel={`Quick:${x.label}`}
+                                                    className="block w-full px-4 py-3 text-sm text-left text-slate-200 hover:bg-white/10 transition-colors"
+                                                    onClick={() => setPlatformMenuOpen(false) as any}
+                                                >
+                                                    {x.label}
+                                                </SafeLink>
+                                            ))}
+                                        </div>
+                                    ) : null}
+                                </div>
+                            ) : null}
                             <LanguageSwitcher />
                             <NotificationBell />
 
@@ -236,7 +310,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                     >
                         <div className="h-16 px-4 flex items-center justify-between border-b border-white/10">
                             <SafeLink
-                                to={user.role === 'SYS_ADMIN' ? '/sysadmin/dashboard' : user.role === 'ADMIN' ? '/admin/dashboard' : '/overview'}
+                                to={brandHref}
                                 className="text-lg font-black text-white tracking-tight"
                                 auditLabel="Brand"
                             >

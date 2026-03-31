@@ -1,4 +1,4 @@
-import { PaymentFrequency, PayoutOrderType, ContributionStatus, GroupType } from '@prisma/client';
+import { PaymentFrequency, PayoutOrderType, ContributionStatus, GroupType, TransactionType } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { NotFoundError, ForbiddenError, ValidationError } from '@/utils/errors';
 import { generateGroupPrefix, generateAccountNumber } from '@/utils/generators';
@@ -23,6 +23,9 @@ type DashboardPeriod =
   | { kind: 'range'; from: Date; to: Date };
 
 export class GroupService {
+  private isSystemAdminRole(role?: string) {
+    return role === 'SYS_ADMIN' || role === 'ADMIN';
+  }
   async createGroup(adminUserId: string, data: CreateGroupData) {
     // Generate unique group prefix
     const groupPrefix = await this.generateUniquePrefix(data.groupName);
@@ -124,13 +127,13 @@ export class GroupService {
       throw new NotFoundError('Group');
     }
 
-    if (group.status === 'DELETED' && userRole !== 'SYS_ADMIN') {
+    if (group.status === 'DELETED' && !this.isSystemAdminRole(userRole)) {
       throw new NotFoundError('Group');
     }
 
     // Check access
     const isMember = group.members.some((m) => m.userId === userId && m.status === 'ACTIVE');
-    const isAdmin = group.adminUserId === userId || userRole === 'SYS_ADMIN';
+    const isAdmin = group.adminUserId === userId || this.isSystemAdminRole(userRole);
 
     if (!isMember && !isAdmin) {
       throw new ForbiddenError('You do not have access to this group');
@@ -148,7 +151,7 @@ export class GroupService {
       throw new NotFoundError('Group');
     }
 
-    if (group.adminUserId !== userId && userRole !== 'SYS_ADMIN') {
+    if (group.adminUserId !== userId && !this.isSystemAdminRole(userRole)) {
       throw new ForbiddenError('Only group admin or system admin can update group');
     }
 
@@ -245,12 +248,12 @@ export class GroupService {
 
     if (!group) throw new NotFoundError('Group');
 
-    if (group.status === 'DELETED' && userRole !== 'SYS_ADMIN') {
+    if (group.status === 'DELETED' && !this.isSystemAdminRole(userRole)) {
       throw new NotFoundError('Group');
     }
 
     const isMember = group.members.some((m) => m.userId === userId && m.status === 'ACTIVE');
-    const isAdmin = group.adminUserId === userId || userRole === 'SYS_ADMIN';
+    const isAdmin = group.adminUserId === userId || this.isSystemAdminRole(userRole);
 
     if (!isMember && !isAdmin) {
       throw new ForbiddenError('You do not have access to this group');
@@ -281,11 +284,11 @@ export class GroupService {
 
     if (!group) throw new NotFoundError('Group');
 
-    if (group.status === 'DELETED' && userRole !== 'SYS_ADMIN') {
+    if (group.status === 'DELETED' && !this.isSystemAdminRole(userRole)) {
       throw new NotFoundError('Group');
     }
 
-    const isAdmin = group.adminUserId === userId || userRole === 'SYS_ADMIN';
+    const isAdmin = group.adminUserId === userId || this.isSystemAdminRole(userRole);
     if (!isAdmin) {
       throw new ForbiddenError('Only group admin or system admin can view this dashboard');
     }
@@ -329,66 +332,82 @@ export class GroupService {
     });
 
     if (group.groupType === 'MICRO_SAVINGS') {
-      const windowStart = resolvedPeriod.kind === 'current_cycle' ? currentCycleDueDate : new Date(resolvedPeriod.from);
-      const windowEnd = resolvedPeriod.kind === 'current_cycle' ? nextCycleDueDate : new Date(resolvedPeriod.to);
-
-      const savingsGoals = await prisma.savingsGoal.findMany({
-        where: { groupId, category: 'MICRO_SAVINGS' as any },
-        select: { id: true, userId: true, currentAmount: true },
-      });
-
-      const balanceByUserId = new Map<string, number>();
-      for (const g of savingsGoals) {
-        const v = Number(g.currentAmount || 0);
-        balanceByUserId.set(g.userId, (balanceByUserId.get(g.userId) || 0) + v);
-      }
-
-      const deposits = await prisma.savingsDeposit.findMany({
-        where: {
-          depositDate: { gte: windowStart, lt: windowEnd },
-          savingsGoal: { groupId, category: 'MICRO_SAVINGS' as any },
-        },
-        select: { amount: true, userId: true },
-      });
-
-      const withdrawals = await prisma.withdrawalRequest.findMany({
-        where: {
-          groupId,
-          status: 'APPROVED' as any,
-          OR: [
-            { processedAt: { gte: windowStart, lt: windowEnd } },
-            { processedAt: null, requestedAt: { gte: windowStart, lt: windowEnd } },
-          ],
-        },
-        select: { amount: true, memberId: true },
-      });
-
-      const depositByUserId = new Map<string, number>();
-      for (const d of deposits) {
-        const v = Number(d.amount || 0);
-        depositByUserId.set(d.userId, (depositByUserId.get(d.userId) || 0) + v);
-      }
+      const windowStart = resolvedPeriod.kind === 'current_cycle'
+        ? new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0))
+        : new Date(resolvedPeriod.from);
+      const windowEnd = resolvedPeriod.kind === 'current_cycle'
+        ? now
+        : new Date(resolvedPeriod.to);
 
       const memberIdToUserId = new Map<string, string>();
       for (const m of activeMembers) memberIdToUserId.set(m.id, m.userId);
 
-      const withdrawalByUserId = new Map<string, number>();
-      for (const w of withdrawals) {
-        const uid = memberIdToUserId.get(w.memberId);
+      const relevantTypes: TransactionType[] = [TransactionType.CONTRIBUTION, TransactionType.PAYOUT, TransactionType.ADJUSTMENT, TransactionType.FEE];
+
+      const windowTx = await prisma.transaction.findMany({
+        where: {
+          groupId,
+          timestamp: { gte: windowStart, lt: windowEnd },
+          transactionType: { in: relevantTypes },
+          memberId: { in: memberIds },
+        },
+        select: { memberId: true, transactionType: true, amount: true },
+      });
+
+      const allTimeTx = await prisma.transaction.findMany({
+        where: {
+          groupId,
+          timestamp: { lt: now },
+          transactionType: { in: relevantTypes },
+          memberId: { in: memberIds },
+        },
+        select: { memberId: true, transactionType: true, amount: true },
+      });
+
+      const addByUser = (map: Map<string, number>, memberId: string | null, amount: number) => {
+        if (!memberId) return;
+        const uid = memberIdToUserId.get(memberId);
+        if (!uid) return;
+        map.set(uid, (map.get(uid) || 0) + amount);
+      };
+
+      const depositsByUserId = new Map<string, number>();
+      const withdrawalsByUserId = new Map<string, number>();
+      const adjustmentsByUserId = new Map<string, number>();
+
+      for (const tx of windowTx) {
+        const v = Number(tx.amount || 0);
+        if (tx.transactionType === TransactionType.CONTRIBUTION || tx.transactionType === TransactionType.FEE) addByUser(depositsByUserId, tx.memberId, v);
+        else if (tx.transactionType === TransactionType.PAYOUT) addByUser(withdrawalsByUserId, tx.memberId, v);
+        else if (tx.transactionType === TransactionType.ADJUSTMENT) addByUser(adjustmentsByUserId, tx.memberId, v);
+      }
+
+      const netDepositsByUserId = new Map<string, number>();
+      for (const m of activeMembers) {
+        const dep = depositsByUserId.get(m.userId) || 0;
+        const adj = adjustmentsByUserId.get(m.userId) || 0;
+        netDepositsByUserId.set(m.userId, dep + adj);
+      }
+
+      const balanceByUserId = new Map<string, number>();
+      for (const tx of allTimeTx) {
+        const v = Number(tx.amount || 0);
+        if (!tx.memberId) continue;
+        const uid = memberIdToUserId.get(tx.memberId);
         if (!uid) continue;
-        const v = Number(w.amount || 0);
-        withdrawalByUserId.set(uid, (withdrawalByUserId.get(uid) || 0) + v);
+        const effect = tx.transactionType === TransactionType.PAYOUT ? -v : v;
+        balanceByUserId.set(uid, (balanceByUserId.get(uid) || 0) + effect);
       }
 
       const netGroupBalance = Array.from(balanceByUserId.values()).reduce((a, b) => a + b, 0);
-      const totalDeposits = Array.from(depositByUserId.values()).reduce((a, b) => a + b, 0);
-      const totalWithdrawals = Array.from(withdrawalByUserId.values()).reduce((a, b) => a + b, 0);
+      const totalDeposits = Array.from(netDepositsByUserId.values()).reduce((a, b) => a + b, 0);
+      const totalWithdrawals = Array.from(withdrawalsByUserId.values()).reduce((a, b) => a + b, 0);
       const averageMemberBalance = activeMembers.length > 0 ? netGroupBalance / activeMembers.length : 0;
 
       const memberStatusItems = activeMembers.map((m) => {
         const balance = balanceByUserId.get(m.userId) || 0;
-        const dep = depositByUserId.get(m.userId) || 0;
-        const wd = withdrawalByUserId.get(m.userId) || 0;
+        const dep = netDepositsByUserId.get(m.userId) || 0;
+        const wd = withdrawalsByUserId.get(m.userId) || 0;
         return {
           memberId: m.id,
           memberName: m.user?.fullName || 'Unknown',
@@ -793,7 +812,7 @@ export class GroupService {
   }
 
   async getUserGroups(userId: string) {
-    return prisma.group.findMany({
+    const groups = await prisma.group.findMany({
       where: {
         status: { not: 'DELETED' },
         OR: [
@@ -818,6 +837,28 @@ export class GroupService {
       },
       orderBy: { createdAt: 'desc' },
     });
+
+    const groupIds = groups.map((g) => g.id);
+    if (groupIds.length === 0) return groups;
+
+    const collectedByGroup = await prisma.transaction.groupBy({
+      by: ['groupId'],
+      where: {
+        groupId: { in: groupIds },
+        transactionType: { in: [TransactionType.CONTRIBUTION, TransactionType.FEE, TransactionType.ADJUSTMENT] },
+      },
+      _sum: { amount: true },
+    });
+
+    const collectedMap = new Map<string, number>();
+    for (const row of collectedByGroup) {
+      collectedMap.set(row.groupId, Number(row._sum.amount || 0));
+    }
+
+    return groups.map((g: any) => ({
+      ...g,
+      totalCollected: collectedMap.get(g.id) || 0,
+    }));
   }
 
   async getAdminAggregateStats(userId: string) {
@@ -843,11 +884,11 @@ export class GroupService {
 
     const groupIds = adminGroups.map((g) => g.id);
     const totalsByCurrency = groupIds.length
-      ? await prisma.contribution.groupBy({
+      ? await prisma.transaction.groupBy({
           by: ['currencyCode'],
           where: {
             groupId: { in: groupIds },
-            status: ContributionStatus.COMPLETED,
+            transactionType: { in: [TransactionType.CONTRIBUTION, TransactionType.FEE, TransactionType.ADJUSTMENT] },
           },
           _sum: { amount: true },
         })
@@ -883,24 +924,47 @@ export class GroupService {
         },
         status: { in: ['ACTIVE', 'CLOSED'] }
       },
-      include: {
-        contributions: {
-          where: {
-            member: { userId: userId },
-            status: { in: [ContributionStatus.COMPLETED] }
-          },
-          select: { amount: true }
-        }
-      }
     });
 
     const totalActiveGroups = memberGroups.length;
-    const totalAmountSaved = memberGroups.reduce((acc, group) => {
-      const groupTotal = (group as any).contributions.reduce((sum: number, c: any) => sum + Number(c.amount), 0);
-      return acc + groupTotal;
-    }, 0);
 
-    return { totalActiveGroups, totalAmountSaved };
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { defaultCurrency: true },
+    });
+    const preferredCurrency = user?.defaultCurrency || 'KES';
+
+    const totalsByCurrency = await prisma.savingsGoal.groupBy({
+      by: ['currencyCode'],
+      where: {
+        userId,
+        status: { in: ['ACTIVE', 'PAUSED', 'COMPLETED'] },
+      },
+      _sum: { currentAmount: true },
+    });
+
+    const normalizedTotalsByCurrency = (totalsByCurrency || [])
+      .map((t) => ({ currencyCode: t.currencyCode, total: Number(t._sum.currentAmount || 0) }))
+      .filter((t) => t.total !== 0)
+      .sort((a, b) => b.total - a.total);
+
+    const currencyCode = normalizedTotalsByCurrency.some((t) => t.currencyCode === preferredCurrency)
+      ? preferredCurrency
+      : normalizedTotalsByCurrency.length === 1
+        ? normalizedTotalsByCurrency[0].currencyCode
+        : null;
+
+    const totalAmountSaved = currencyCode
+      ? (normalizedTotalsByCurrency.find((t) => t.currencyCode === currencyCode)?.total || 0)
+      : 0;
+
+    return {
+      totalActiveGroups,
+      totalAmountSaved,
+      currencyCode,
+      totalsByCurrency: normalizedTotalsByCurrency,
+      multiCurrency: normalizedTotalsByCurrency.length > 1,
+    };
   }
 
   private async generateUniquePrefix(groupName: string): Promise<string> {

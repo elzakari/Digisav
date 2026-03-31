@@ -75,6 +75,9 @@
         "set_current": "Définir comme actuel",
         "standard_micro": "Standard + Micro",
         "approve": "Approuver",
+        "reject": "Rejeter",
+        "correction": "Correction",
+        "fee": "Frais",
         "deny": "Refuser",
         "confirm_deny": "Êtes-vous sûr de vouloir refuser cette demande ?",
         "history": "Historique",
@@ -103,7 +106,7 @@
     "role": {
         "ADMIN": "Admin Système",
         "MEMBER": "Membre",
-        "SYS_ADMIN": "ADMIN SYS",
+        "SYS_ADMIN": "SUPER ADMIN",
         "GROUP_ADMIN": "ADMIN"
     },
     "frequency": {
@@ -536,6 +539,7 @@
         "live": "En direct",
         "payout_recorded": "Versement enregistré",
         "contribution_recorded": "Cotisation enregistrée",
+        "correction_recorded": "Correction enregistrée",
         "by": "par",
         "no_recent_activity": "Aucune activité récente.",
         "contributions_status_title": "Statut des cotisations",

@@ -13,7 +13,9 @@ const GoalCard: React.FC<GoalCardProps> = ({ goal, onClick }) => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [isProcessing, setIsProcessing] = React.useState(false);
-  const progress = Math.min((goal.currentAmount / goal.targetAmount) * 100, 100);
+  const rawProgress = goal.targetAmount > 0 ? (goal.currentAmount / goal.targetAmount) * 100 : 0;
+  const progress = Math.min(rawProgress, 100);
+  const progressLabel = progress >= 1 ? `${Math.round(progress)}%` : progress > 0 ? `${progress.toFixed(1)}%` : '0%';
 
   const handleAction = async (action: 'withdraw' | 'reinvest') => {
     const feePercent = 2;
@@ -103,7 +105,7 @@ const GoalCard: React.FC<GoalCardProps> = ({ goal, onClick }) => {
               </span>
             </div>
             <div className="text-blue-400 font-bold text-lg">
-              {Math.round(progress)}%
+              {progressLabel}
             </div>
           </div>
 
