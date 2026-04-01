@@ -11,10 +11,9 @@ export const updateContributionSchema = z
         amount: z.number().positive().optional(),
         paymentDate: z.string().datetime().optional(),
         paymentMethod: z.enum(['CASH', 'MOBILE_MONEY', 'BANK_TRANSFER']).optional(),
-        referenceNumber: z.string().max(100).optional().nullable(),
-        notes: z.string().max(1000).optional().nullable(),
+        referenceNumber: z.string().max(100).optional().nullable().or(z.literal('')),
+        notes: z.string().max(1000).optional().nullable().or(z.literal('')),
       })
       .refine((b) => Object.keys(b).length > 0, { message: 'At least one field must be provided' }),
-  })
-  .strict();
+  });
 

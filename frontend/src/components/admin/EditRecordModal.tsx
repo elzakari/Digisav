@@ -61,25 +61,31 @@ export function EditRecordModal({ groupId, transaction, isOpen, onClose }: Props
 
       if (transaction?.transactionType === 'CONTRIBUTION') {
         const contributionId = transaction?.referenceId;
-        if (!contributionId) throw new Error('Missing contribution reference');
+        if (!contributionId) {
+          throw new Error('Missing contribution reference');
+        }
         const paymentMethod = mapUiToContributionApi(form.paymentMethod);
-        return contributionService.updateContribution(groupId, contributionId, {
-          ...(amount !== undefined ? { amount } : {}),
-          ...(paymentDateIso ? { paymentDate: paymentDateIso } : {}),
-          ...(paymentMethod ? { paymentMethod } : {}),
-          referenceNumber: form.referenceNumber || null,
-          notes: form.notes || null,
-        });
+        
+        // Remove undefined/null/empty keys to avoid validation errors
+        const updatePayload: any = {};
+        if (amount !== undefined) updatePayload.amount = amount;
+        if (paymentDateIso) updatePayload.paymentDate = paymentDateIso;
+        if (paymentMethod) updatePayload.paymentMethod = paymentMethod;
+        if (form.referenceNumber !== undefined) updatePayload.referenceNumber = form.referenceNumber || null;
+        if (form.notes !== undefined) updatePayload.notes = form.notes || null;
+
+        return contributionService.updateContribution(groupId, contributionId, updatePayload);
       }
 
       if (transaction?.transactionType === 'PAYOUT') {
-        return transactionService.adjustPayout(groupId, transaction.id, {
-          ...(amount !== undefined ? { amount } : {}),
-          ...(paymentDateIso ? { paymentDate: paymentDateIso } : {}),
-          paymentMethod: form.paymentMethod || undefined,
-          referenceNumber: form.referenceNumber || null,
-          notes: form.notes || null,
-        });
+        const updatePayload: any = {};
+        if (amount !== undefined) updatePayload.amount = amount;
+        if (paymentDateIso) updatePayload.paymentDate = paymentDateIso;
+        if (form.paymentMethod) updatePayload.paymentMethod = form.paymentMethod;
+        if (form.referenceNumber !== undefined) updatePayload.referenceNumber = form.referenceNumber || null;
+        if (form.notes !== undefined) updatePayload.notes = form.notes || null;
+
+        return transactionService.adjustPayout(groupId, transaction.id, updatePayload);
       }
 
       throw new Error('Unsupported transaction type');
