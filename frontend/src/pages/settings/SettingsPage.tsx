@@ -19,22 +19,29 @@ export function SettingsPage() {
         onSuccess: (data) => {
             queryClient.invalidateQueries({ queryKey: ['user-profile'] });
             authService.updateStoredUser(data);
-            toast.success(t('settings.updated_success'));
+            toast.success(t('settings.updated_success') || 'Profile updated successfully');
         },
-        onError: () => {
-            toast.error(t('settings.updated_error'));
+        onError: (error: any) => {
+            const msg = error?.response?.data?.error?.message || error?.response?.data?.message || 'Failed to update profile';
+            toast.error(msg);
         }
     });
 
     const [language, setLanguage] = useState(profile?.language || 'en');
     const [theme, setTheme] = useState(profile?.theme || 'dark');
     const [currency, setCurrency] = useState(profile?.defaultCurrency || 'KES');
+    
+    // Account details state
+    const [fullName, setFullName] = useState(profile?.fullName || '');
+    const [phoneNumber, setPhoneNumber] = useState(profile?.phoneNumber || '');
 
     useEffect(() => {
         if (profile) {
             setLanguage(profile.language);
             setTheme(profile.theme);
             setCurrency(profile.defaultCurrency);
+            setFullName(profile.fullName || '');
+            setPhoneNumber(profile.phoneNumber || '');
             
             // Sync UI state with profile preferences
             if (i18n.language !== profile.language) {
@@ -45,6 +52,11 @@ export function SettingsPage() {
             }
         }
     }, [profile, i18n]);
+
+    const handleAccountUpdate = (e: React.FormEvent) => {
+        e.preventDefault();
+        updateSettingsMutation.mutate({ fullName, phoneNumber });
+    };
 
     const handleLanguageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const newLang = e.target.value;
@@ -76,6 +88,64 @@ export function SettingsPage() {
             </header>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* Account Details */}
+                <section className="glass-card p-8 space-y-8 md:col-span-2">
+                    <div className="flex items-center gap-3 border-b border-white/5 pb-4">
+                        <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400">
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                        </div>
+                        <h2 className="text-xl font-bold text-white">{t('settings.account_details') || 'Account Details'}</h2>
+                    </div>
+
+                    <form onSubmit={handleAccountUpdate} className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-400 uppercase tracking-widest ml-1">{t('common.full_name') || 'Full Name'}</label>
+                                <input 
+                                    type="text"
+                                    value={fullName}
+                                    onChange={(e) => setFullName(e.target.value)}
+                                    className="w-full glass-input bg-[#1e1b4b]"
+                                    required
+                                />
+                            </div>
+                            
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-400 uppercase tracking-widest ml-1">{t('common.phone_number') || 'Phone Number'}</label>
+                                <input 
+                                    type="tel"
+                                    value={phoneNumber}
+                                    onChange={(e) => setPhoneNumber(e.target.value)}
+                                    className="w-full glass-input bg-[#1e1b4b]"
+                                    required
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-400 uppercase tracking-widest ml-1">{t('common.email') || 'Email Address'}</label>
+                                <input 
+                                    type="email"
+                                    value={profile?.email || ''}
+                                    className="w-full glass-input bg-white/5 text-slate-500 cursor-not-allowed"
+                                    disabled
+                                    title="Email cannot be changed directly"
+                                />
+                                <p className="text-[10px] text-slate-500 mt-1 ml-1">* Email address is used for login and cannot be changed here.</p>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end pt-4">
+                            <button 
+                                type="submit" 
+                                disabled={updateSettingsMutation.isPending}
+                                className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all disabled:opacity-50"
+                            >
+                                {updateSettingsMutation.isPending ? t('common.saving') || 'Saving...' : t('common.save_changes') || 'Save Changes'}
+                            </button>
+                        </div>
+                    </form>
+                </section>
+
                 {/* Visual Settings */}
                 <section className="glass-card p-8 space-y-8">
                     <div className="flex items-center gap-3 border-b border-white/5 pb-4">
