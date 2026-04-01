@@ -95,6 +95,7 @@ export function EditRecordModal({ groupId, transaction, isOpen, onClose }: Props
         queryClient.invalidateQueries({ queryKey: ['group-transactions', groupId] }),
         queryClient.invalidateQueries({ queryKey: ['group-dashboard', groupId] }),
         queryClient.invalidateQueries({ queryKey: ['group-stats', groupId] }),
+        queryClient.invalidateQueries({ queryKey: ['admin-stats'] }),
         queryClient.invalidateQueries({ queryKey: ['group-contributions', groupId] }),
         queryClient.invalidateQueries({ queryKey: ['group', groupId] })
       ]);

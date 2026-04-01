@@ -176,6 +176,9 @@ export function GroupDashboard() {
       }
 
       queryClient.invalidateQueries({ queryKey: ['group', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['group-dashboard', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['group-stats', groupId] });
+      queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
       toast.success(t('common.saved') || 'Saved');
     } catch (err: any) {
       const msg = err?.response?.data?.error?.message || err?.response?.data?.message;

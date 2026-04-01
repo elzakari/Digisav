@@ -357,7 +357,6 @@ export class GroupService {
       const allTimeTx = await prisma.transaction.findMany({
         where: {
           groupId,
-          timestamp: { lt: now },
           transactionType: { in: relevantTypes },
           memberId: { in: memberIds },
         },
@@ -402,22 +401,31 @@ export class GroupService {
         balanceByUserId.set(uid, (balanceByUserId.get(uid) || 0) + effect);
       }
 
+      // Calculate total deposits independently from allTimeTx to match what is displayed everywhere else (net Deposits)
+      let totalAllTimeDeposits = 0;
+      for (const tx of allTimeTx) {
+         const v = Number(tx.amount || 0);
+         if (tx.transactionType === TransactionType.CONTRIBUTION || tx.transactionType === TransactionType.FEE || tx.transactionType === TransactionType.ADJUSTMENT) {
+           totalAllTimeDeposits += v;
+         }
+      }
+
       const netGroupBalance = Array.from(balanceByUserId.values()).reduce((a, b) => a + b, 0);
-      const totalDeposits = Array.from(netDepositsByUserId.values()).reduce((a, b) => a + b, 0);
+      const totalDepositsPeriod = Array.from(netDepositsByUserId.values()).reduce((a, b) => a + b, 0);
       const totalWithdrawals = Array.from(withdrawalsByUserId.values()).reduce((a, b) => a + b, 0);
       const averageMemberBalance = activeMembers.length > 0 ? netGroupBalance / activeMembers.length : 0;
 
       const memberStatusItems = activeMembers.map((m) => {
         const balance = balanceByUserId.get(m.userId) || 0;
-        const dep = netDepositsByUserId.get(m.userId) || 0;
-        const wd = withdrawalsByUserId.get(m.userId) || 0;
+        const deps = netDepositsByUserId.get(m.userId) || 0;
+        const wids = withdrawalsByUserId.get(m.userId) || 0;
         return {
           memberId: m.id,
           memberName: m.user?.fullName || 'Unknown',
           balance,
-          deposits: dep,
-          withdrawals: wd,
-          netChange: dep - wd,
+          deposits: deps,
+          withdrawals: wids,
+          net: deps - wids,
           currencyCode: group.currencyCode,
         };
       });
@@ -440,20 +448,23 @@ export class GroupService {
         period: rangeLabel,
         common: {
           activeMembersCount: activeMembers.length,
-          totalCollected: { amount: totalDeposits, currencyCode: group.currencyCode },
+          totalCollected: { amount: totalAllTimeDeposits, currencyCode: group.currencyCode },
           totalOutstanding: { amount: 0, currencyCode: group.currencyCode },
           pastDueMembersCount: 0,
           dataAsOf: now.toISOString(),
         },
         microSavings: {
           netGroupBalance: { amount: netGroupBalance, currencyCode: group.currencyCode },
-          totalDeposits: { amount: totalDeposits, currencyCode: group.currencyCode },
+          totalDeposits: { amount: totalAllTimeDeposits, currencyCode: group.currencyCode },
           totalWithdrawals: { amount: totalWithdrawals, currencyCode: group.currencyCode },
           averageMemberBalance: { amount: averageMemberBalance, currencyCode: group.currencyCode },
         },
         memberStatus: {
           kind: 'micro_savings',
           items: memberStatusItems,
+        },
+        insights: {
+          collectedByCycle: [], // Will populate properly if needed later, right now micro savings don't use cycles
         },
         recentActivity,
       };
