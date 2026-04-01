@@ -364,6 +364,79 @@ export class ContributionService {
   }
 
   async updateContribution(data: UpdateContributionData) {
+    const group = await this.prisma.group.findUnique({ where: { id: data.groupId } });
+    if (!group) throw new NotFoundError('Group');
+
+    const canEdit = group.adminUserId === data.userId || data.userRole === 'SYS_ADMIN' || data.userRole === 'ADMIN';
+    if (!canEdit) throw new ValidationError('Insufficient permissions to update record');
+
+    if (group.groupType === 'MICRO_SAVINGS') {
+      const existingDeposit = await this.prisma.savingsDeposit.findUnique({
+        where: { id: data.contributionId },
+        include: { savingsGoal: true },
+      });
+
+      if (!existingDeposit || existingDeposit.savingsGoal.groupId !== data.groupId) {
+        throw new NotFoundError('Savings Deposit');
+      }
+
+      const nextAmount = data.amount !== undefined ? data.amount : Number(existingDeposit.amount);
+      const nextPaymentDate = data.paymentDate ?? existingDeposit.depositDate;
+      const nextReferenceNumber = data.referenceNumber !== undefined ? data.referenceNumber : existingDeposit.referenceNumber;
+      const nextNotes = data.notes !== undefined ? data.notes : existingDeposit.notes;
+
+      return await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+        const deposit = await tx.savingsDeposit.update({
+          where: { id: existingDeposit.id },
+          data: {
+            amount: nextAmount,
+            depositDate: nextPaymentDate,
+            referenceNumber: nextReferenceNumber as any,
+            notes: nextNotes as any,
+          },
+        });
+
+        const delta = Number(nextAmount) - Number(existingDeposit.amount);
+
+        if (delta !== 0) {
+          const newAmount = Number(existingDeposit.savingsGoal.currentAmount) + delta;
+          await tx.savingsGoal.update({
+            where: { id: existingDeposit.savingsGoalId },
+            data: { currentAmount: newAmount }
+          });
+        }
+
+        const ledgerService = new LedgerService(tx as any);
+        await ledgerService.createTransaction({
+          groupId: data.groupId,
+          memberId: existingDeposit.savingsGoal.memberId,
+          transactionType: TransactionType.ADJUSTMENT,
+          amount: delta,
+          currencyCode: existingDeposit.currencyCode,
+          referenceId: existingDeposit.id,
+          recordedBy: data.userId,
+          metadata: {
+            type: 'DEPOSIT_EDIT',
+            depositId: existingDeposit.id,
+            old: {
+              amount: Number(existingDeposit.amount),
+              paymentDate: existingDeposit.depositDate,
+              referenceNumber: existingDeposit.referenceNumber,
+              notes: existingDeposit.notes,
+            },
+            new: {
+              amount: Number(nextAmount),
+              paymentDate: nextPaymentDate,
+              referenceNumber: nextReferenceNumber,
+              notes: nextNotes,
+            },
+          },
+        });
+
+        return deposit;
+      });
+    }
+
     const existing = await this.prisma.contribution.findUnique({
       where: { id: data.contributionId },
       include: { member: { include: { group: true } }, group: true },
@@ -372,10 +445,6 @@ export class ContributionService {
     if (!existing || existing.groupId !== data.groupId) {
       throw new NotFoundError('Contribution');
     }
-
-    const group = existing.group;
-    const canEdit = group.adminUserId === data.userId || data.userRole === 'SYS_ADMIN' || data.userRole === 'ADMIN';
-    if (!canEdit) throw new ValidationError('Insufficient permissions to update contribution');
 
     const nextAmount = data.amount !== undefined ? data.amount : Number(existing.amount);
     const nextPaymentDate = data.paymentDate ?? existing.paymentDate;
