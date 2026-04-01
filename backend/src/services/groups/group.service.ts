@@ -395,6 +395,9 @@ export class GroupService {
         if (!tx.memberId) continue;
         const uid = memberIdToUserId.get(tx.memberId);
         if (!uid) continue;
+        // In the ledger, payouts reduce the balance, but contributions, fees, and positive adjustments increase it.
+        // Adjustments can be positive or negative depending on context, but here tx.amount is usually absolute delta or signed delta.
+        // For our purpose, if transactionType is PAYOUT, it's a deduction. Everything else (CONTRIBUTION, FEE, ADJUSTMENT) is an addition.
         const effect = tx.transactionType === TransactionType.PAYOUT ? -v : v;
         balanceByUserId.set(uid, (balanceByUserId.get(uid) || 0) + effect);
       }

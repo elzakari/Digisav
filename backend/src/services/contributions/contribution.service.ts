@@ -404,34 +404,34 @@ export class ContributionService {
             where: { id: existingDeposit.savingsGoalId },
             data: { currentAmount: newAmount }
           });
+          
+          const ledgerService = new LedgerService(tx as any);
+          await ledgerService.createTransaction({
+            groupId: data.groupId,
+            memberId: existingDeposit.savingsGoal.memberId,
+            transactionType: TransactionType.ADJUSTMENT,
+            amount: delta,
+            currencyCode: existingDeposit.currencyCode,
+            referenceId: existingDeposit.id,
+            recordedBy: data.userId,
+            metadata: {
+              type: 'DEPOSIT_EDIT',
+              depositId: existingDeposit.id,
+              old: {
+                amount: Number(existingDeposit.amount),
+                paymentDate: existingDeposit.depositDate,
+                referenceNumber: existingDeposit.referenceNumber,
+                notes: existingDeposit.notes,
+              },
+              new: {
+                amount: Number(nextAmount),
+                paymentDate: nextPaymentDate,
+                referenceNumber: nextReferenceNumber,
+                notes: nextNotes,
+              },
+            },
+          });
         }
-
-        const ledgerService = new LedgerService(tx as any);
-        await ledgerService.createTransaction({
-          groupId: data.groupId,
-          memberId: existingDeposit.savingsGoal.memberId,
-          transactionType: TransactionType.ADJUSTMENT,
-          amount: delta,
-          currencyCode: existingDeposit.currencyCode,
-          referenceId: existingDeposit.id,
-          recordedBy: data.userId,
-          metadata: {
-            type: 'DEPOSIT_EDIT',
-            depositId: existingDeposit.id,
-            old: {
-              amount: Number(existingDeposit.amount),
-              paymentDate: existingDeposit.depositDate,
-              referenceNumber: existingDeposit.referenceNumber,
-              notes: existingDeposit.notes,
-            },
-            new: {
-              amount: Number(nextAmount),
-              paymentDate: nextPaymentDate,
-              referenceNumber: nextReferenceNumber,
-              notes: nextNotes,
-            },
-          },
-        });
 
         return deposit;
       });
@@ -485,34 +485,36 @@ export class ContributionService {
 
       const delta = Number(nextAmount) - Number(existing.amount);
 
-      const ledgerService = new LedgerService(tx as any);
-      await ledgerService.createTransaction({
-        groupId: existing.groupId,
-        memberId: existing.memberId,
-        transactionType: TransactionType.ADJUSTMENT,
-        amount: delta,
-        currencyCode: existing.currencyCode,
-        referenceId: existing.id,
-        recordedBy: data.userId,
-        metadata: {
-          type: 'CONTRIBUTION_EDIT',
-          contributionId: existing.id,
-          old: {
-            amount: Number(existing.amount),
-            paymentDate: existing.paymentDate,
-            paymentMethod: existing.paymentMethod,
-            referenceNumber: existing.referenceNumber,
-            notes: existing.notes,
+      if (delta !== 0) {
+        const ledgerService = new LedgerService(tx as any);
+        await ledgerService.createTransaction({
+          groupId: existing.groupId,
+          memberId: existing.memberId,
+          transactionType: TransactionType.ADJUSTMENT,
+          amount: delta,
+          currencyCode: existing.currencyCode,
+          referenceId: existing.id,
+          recordedBy: data.userId,
+          metadata: {
+            type: 'CONTRIBUTION_EDIT',
+            contributionId: existing.id,
+            old: {
+              amount: Number(existing.amount),
+              paymentDate: existing.paymentDate,
+              paymentMethod: existing.paymentMethod,
+              referenceNumber: existing.referenceNumber,
+              notes: existing.notes,
+            },
+            new: {
+              amount: Number(nextAmount),
+              paymentDate: nextPaymentDate,
+              paymentMethod: nextPaymentMethod,
+              referenceNumber: nextReferenceNumber,
+              notes: nextNotes,
+            },
           },
-          new: {
-            amount: Number(nextAmount),
-            paymentDate: nextPaymentDate,
-            paymentMethod: nextPaymentMethod,
-            referenceNumber: nextReferenceNumber,
-            notes: nextNotes,
-          },
-        },
-      });
+        });
+      }
 
       return contribution;
     });
