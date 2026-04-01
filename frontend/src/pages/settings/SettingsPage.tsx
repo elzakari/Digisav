@@ -94,13 +94,13 @@ export function SettingsPage() {
                         <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400">
                             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                         </div>
-                        <h2 className="text-xl font-bold text-white">{t('settings.account_details') || 'Account Details'}</h2>
+                        <h2 className="text-xl font-bold text-white">{String(t('settings.account_details', { defaultValue: 'Account Details' } as any))}</h2>
                     </div>
 
                     <form onSubmit={handleAccountUpdate} className="space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
-                                <label className="text-sm font-bold text-slate-400 uppercase tracking-widest ml-1">{t('common.full_name') || 'Full Name'}</label>
+                                <label className="text-sm font-bold text-slate-400 uppercase tracking-widest ml-1">{String(t('common.full_name', { defaultValue: 'Full Name' } as any))}</label>
                                 <input 
                                     type="text"
                                     value={fullName}
@@ -111,7 +111,7 @@ export function SettingsPage() {
                             </div>
                             
                             <div className="space-y-2">
-                                <label className="text-sm font-bold text-slate-400 uppercase tracking-widest ml-1">{t('common.phone_number') || 'Phone Number'}</label>
+                                <label className="text-sm font-bold text-slate-400 uppercase tracking-widest ml-1">{String(t('common.phone_number', { defaultValue: 'Phone Number' } as any))}</label>
                                 <input 
                                     type="tel"
                                     value={phoneNumber}
@@ -122,7 +122,7 @@ export function SettingsPage() {
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-sm font-bold text-slate-400 uppercase tracking-widest ml-1">{t('common.email') || 'Email Address'}</label>
+                                <label className="text-sm font-bold text-slate-400 uppercase tracking-widest ml-1">{String(t('common.email', { defaultValue: 'Email Address' } as any))}</label>
                                 <input 
                                     type="email"
                                     value={profile?.email || ''}
@@ -140,7 +140,7 @@ export function SettingsPage() {
                                 disabled={updateSettingsMutation.isPending}
                                 className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all disabled:opacity-50"
                             >
-                                {updateSettingsMutation.isPending ? t('common.saving') || 'Saving...' : t('common.save_changes') || 'Save Changes'}
+                                {updateSettingsMutation.isPending ? String(t('common.saving', { defaultValue: 'Saving...' } as any)) : String(t('common.save_changes', { defaultValue: 'Save Changes' } as any))}
                             </button>
                         </div>
                     </form>
