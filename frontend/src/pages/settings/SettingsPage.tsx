@@ -154,7 +154,7 @@ export function SettingsPage() {
                     <p className="text-sm text-slate-400">{t('settings.data_persistence_desc')}</p>
                 </div>
                 <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04kM12 21.5c-4.632-1.28-7-6.28-7-9.5V6.75l7-2.5 7 2.5V12c0 3.22-2.368 8.22-7 9.5z" /></svg>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04M12 21.5c-4.632-1.28-7-6.28-7-9.5V6.75l7-2.5 7 2.5V12c0 3.22-2.368 8.22-7 9.5z" /></svg>
                     {t('settings.encrypted_sync')}
                 </div>
             </div>

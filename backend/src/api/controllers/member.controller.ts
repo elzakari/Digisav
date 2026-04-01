@@ -4,6 +4,7 @@ import { AuthRequest } from '@/api/middleware/auth.middleware';
 import { InvitationService } from '@/services/invitations/invitation.service';
 import { ValidationError } from '@/utils/errors';
 import prisma from '@/lib/prisma';
+import { isValidNationalId } from '@/utils/kyc';
 
 export class MemberController {
   private memberService: MemberService;
@@ -53,6 +54,11 @@ export class MemberController {
       }
       if (!nationalId || typeof nationalId !== 'string') {
         throw new ValidationError('National ID is required');
+      }
+
+      const user = await prisma.user.findUnique({ where: { id: userId }, select: { countryCode: true } });
+      if (user?.countryCode && !isValidNationalId(user.countryCode, nationalId)) {
+        throw new ValidationError('Invalid National ID format');
       }
 
       const group = await prisma.group.findUnique({ where: { groupPrefix: groupCode.trim().toUpperCase() } });

@@ -4,13 +4,23 @@ import { authService } from '@/services/auth.service';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { AuthLayout } from '@/components/auth/AuthLayout';
+import { COUNTRIES, getCountryOption } from '@/constants/countries';
 
 export function RegisterPage() {
   const navigate = useNavigate();
-  const { t } = useTranslation();
-  const { register, handleSubmit, formState: { errors } } = useForm();
+  const { t, i18n } = useTranslation();
+  const { register, handleSubmit, watch, formState: { errors } } = useForm();
   const [error, setError] = React.useState('');
   const [loading, setLoading] = React.useState(false);
+
+  const selectedCountryCode = watch('countryCode');
+  const selectedCountry = getCountryOption(selectedCountryCode);
+
+  React.useEffect(() => {
+    if (!selectedCountry?.language) return;
+    i18n.changeLanguage(selectedCountry.language);
+    localStorage.setItem('i18nextLng', selectedCountry.language);
+  }, [i18n, selectedCountry?.language]);
 
   const onSubmit = async (data: any) => {
     setLoading(true);
@@ -101,6 +111,38 @@ export function RegisterPage() {
               {errors.phoneNumber.message as string}
             </div>
           )}
+        </div>
+
+        <div className="space-y-1.5">
+          <label htmlFor="countryCode" className="block text-sm font-medium text-white/80">
+            {String(t('common.country', { defaultValue: 'Country' } as any))}
+          </label>
+          <select
+            id="countryCode"
+            {...register('countryCode', { required: String(t('errors.country_required', { defaultValue: 'Country is required' } as any)) })}
+            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none backdrop-blur-md focus:border-indigo-400/70 focus:ring-2 focus:ring-indigo-500/25"
+            defaultValue=""
+            aria-invalid={errors.countryCode ? 'true' : 'false'}
+            aria-describedby={errors.countryCode ? 'country-error' : undefined}
+          >
+            <option value="" className="bg-slate-900">
+              {String(t('common.select_country', { defaultValue: 'Select country' } as any))}
+            </option>
+            {COUNTRIES.map((c) => (
+              <option key={c.code} value={c.code} className="bg-slate-900">
+                {c.name}
+              </option>
+            ))}
+          </select>
+          {errors.countryCode ? (
+            <div id="country-error" className="text-rose-200 text-xs" role="alert">
+              {errors.countryCode.message as string}
+            </div>
+          ) : selectedCountry ? (
+            <div className="text-[11px] text-white/60">
+              {String(t('common.default_currency', { defaultValue: 'Default currency' } as any))}: {selectedCountry.currencyCode} · {String(t('common.language', { defaultValue: 'Language' } as any))}: {selectedCountry.language.toUpperCase()}
+            </div>
+          ) : null}
         </div>
 
         <div className="space-y-1.5">

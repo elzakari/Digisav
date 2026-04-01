@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import prisma from '@/lib/prisma';
 import { UnauthorizedError, ValidationError } from '@/utils/errors';
+import { getDefaultsForCountry, normalizeCountry } from '@/utils/countryDefaults';
 const SALT_ROUNDS = 12;
 
 interface TokenPayload {
@@ -16,6 +17,7 @@ export class AuthService {
     phoneNumber: string;
     password: string;
     fullName: string;
+    countryCode?: string;
   }) {
     // Check if user exists
     const existing = await prisma.user.findFirst({
@@ -31,14 +33,26 @@ export class AuthService {
     // Hash password
     const passwordHash = await bcrypt.hash(data.password, SALT_ROUNDS);
 
+    const normalizedCountry = normalizeCountry(data.countryCode);
+    if (!normalizedCountry) {
+      throw new ValidationError('countryCode is required');
+    }
+    const defaults = getDefaultsForCountry(normalizedCountry);
+    if (!defaults) {
+      throw new ValidationError('Unsupported countryCode');
+    }
+
     // Destructure to exclude raw `password` – Prisma only knows `passwordHash`
-    const { password: _rawPassword, ...rest } = data;
+    const { password: _rawPassword, countryCode: _rawCountry, ...rest } = data;
 
     // Create user
     const user = await prisma.user.create({
       data: {
         ...rest,
         passwordHash,
+        countryCode: defaults.countryCode,
+        defaultCurrency: defaults.currencyCode,
+        language: defaults.language,
       },
       select: {
         id: true,
@@ -48,6 +62,9 @@ export class AuthService {
         role: true,
         status: true,
         createdAt: true,
+        countryCode: true,
+        defaultCurrency: true,
+        language: true,
       },
     });
 

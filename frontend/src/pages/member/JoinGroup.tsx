@@ -5,6 +5,8 @@ import { groupService } from '@/services/group.service';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '@/store/auth.store';
 import { toast } from 'react-hot-toast';
+import { getCountryOption } from '@/constants/countries';
+import { isValidNationalId } from '@/utils/kyc';
 
 export function JoinGroupPage() {
     const { t } = useTranslation();
@@ -19,7 +21,9 @@ export function JoinGroupPage() {
         dateOfBirth: '',
     });
 
-    const isLoggedIn = !!useAuthStore((s) => s.user);
+    const user = useAuthStore((s) => s.user);
+    const isLoggedIn = !!user;
+    const country = getCountryOption((user as any)?.countryCode);
 
     const { data: invitation, isLoading } = useQuery({
         queryKey: ['invitation', token],
@@ -117,6 +121,13 @@ export function JoinGroupPage() {
                                 navigate('/login');
                                 return;
                             }
+
+                            const cc = (user as any)?.countryCode || null;
+                            if (!isValidNationalId(cc, requestForm.nationalId)) {
+                                const hint = country?.kycHint ? ` (${country.kycHint})` : '';
+                                toast.error(`${String(t('join.invalid_national_id', { defaultValue: 'Invalid ID format' } as any))}${hint}`);
+                                return;
+                            }
                             requestJoinMutation.mutate();
                         }}
                         className="space-y-5"
@@ -133,13 +144,15 @@ export function JoinGroupPage() {
                         </div>
 
                         <div className="space-y-1.5">
-                            <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">{String(t('join.national_id', { defaultValue: 'National ID' } as any))}</label>
+                            <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">
+                                {country?.kycLabel ? `${country.kycLabel}` : String(t('join.national_id', { defaultValue: 'National ID' } as any))}
+                            </label>
                             <input
                                 required
                                 value={requestForm.nationalId}
                                 onChange={(e) => setRequestForm((p) => ({ ...p, nationalId: e.target.value }))}
                                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-indigo-500/50 transition-all"
-                                placeholder={String(t('join.national_id_placeholder', { defaultValue: 'Your ID number' } as any))}
+                                placeholder={country?.kycHint || String(t('join.national_id_placeholder', { defaultValue: 'Your ID number' } as any))}
                             />
                         </div>
 

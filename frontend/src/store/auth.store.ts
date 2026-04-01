@@ -8,6 +8,7 @@ export type AuthUser = {
   theme?: string | null;
   language?: string | null;
   defaultCurrency?: string | null;
+  countryCode?: string | null;
   optedOutOfGroupSavings?: boolean | null;
 };
 

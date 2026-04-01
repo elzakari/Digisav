@@ -22,6 +22,7 @@ export class UserController {
                     language: true,
                     theme: true,
                     defaultCurrency: true,
+                    countryCode: true,
                 },
             });
 
@@ -39,11 +40,11 @@ export class UserController {
     async updateProfile(req: Request, res: Response, next: NextFunction) {
         try {
             const userId = (req as any).user.id;
-            const { fullName, phoneNumber, language, theme, defaultCurrency } = req.body;
+            const { fullName, phoneNumber, language, theme, defaultCurrency, countryCode } = req.body;
 
             const updated = await prisma.user.update({
                 where: { id: userId },
-                data: { fullName, phoneNumber, language, theme, defaultCurrency },
+                data: { fullName, phoneNumber, language, theme, defaultCurrency, countryCode },
                 select: {
                     id: true,
                     email: true,
@@ -54,6 +55,7 @@ export class UserController {
                     language: true,
                     theme: true,
                     defaultCurrency: true,
+                    countryCode: true,
                 },
             });
 
