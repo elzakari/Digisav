@@ -1,5 +1,6 @@
 import { TransactionType } from '@prisma/client';
 import prisma from '@/lib/prisma';
+import { generateTransactionReference } from '@/utils/generators';
 import { LedgerService } from '@/services/ledger/ledger.service';
 import { NotFoundError, ValidationError, ForbiddenError } from '@/utils/errors';
 import { NotificationService } from '@/services/notifications/notification.service';
@@ -43,6 +44,8 @@ export class PayoutService {
         }
 
         // 2. Record transaction in Ledger as PAYOUT
+        const finalReferenceNumber = data.referenceNumber || generateTransactionReference(data.paymentMethod, 'PAYOUT');
+
         const transaction = await this.ledgerService.createTransaction({
             groupId: data.groupId,
             memberId: data.memberId,
@@ -52,7 +55,7 @@ export class PayoutService {
             recordedBy: data.recordedBy,
             metadata: {
                 paymentMethod: data.paymentMethod,
-                referenceNumber: data.referenceNumber,
+                referenceNumber: finalReferenceNumber,
                 notes: data.notes,
             },
         });

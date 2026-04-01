@@ -188,8 +188,8 @@ export function RecordContributionModal({ groupId, members, currencyCode, isOpen
                             </label>
                             <input
                                 type="text"
-                                placeholder={t('admin.ref_placeholder')}
                                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-indigo-500/50 transition-all placeholder:text-slate-700"
+                                placeholder={t('common.leave_blank_auto', 'Leave blank to auto-generate')}
                                 value={formData.referenceNumber}
                                 onChange={(e) => setFormData({ ...formData, referenceNumber: e.target.value })}
                             />

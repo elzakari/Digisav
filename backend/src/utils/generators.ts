@@ -66,3 +66,19 @@ function calculateLuhnCheckDigit(input: string): string {
 export function generateInvitationToken(): string {
   return crypto.randomBytes(32).toString('hex');
 }
+
+export function generateTransactionReference(paymentMethod: string, operationType: string, dateObj?: Date): string {
+  const pInit = paymentMethod ? paymentMethod.charAt(0).toUpperCase() : 'X';
+  const oInit = operationType ? operationType.charAt(0).toUpperCase() : 'X';
+  
+  const d = dateObj ? new Date(dateObj) : new Date();
+  const yy = String(d.getFullYear()).slice(-2);
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  
+  // Series of 5 digit
+  const random5 = crypto.randomInt(1, 99999).toString().padStart(5, '0');
+  
+  // Format: Initial of mode of payment + Initial of operation + date"YY-MM-DD" + series of 5 digit
+  return `${pInit}${oInit}${yy}-${mm}-${dd}${random5}`;
+}

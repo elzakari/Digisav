@@ -1,6 +1,7 @@
 import { PrismaClient, PaymentMethod, TransactionType, Prisma } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { generateHash } from '@/utils/crypto';
+import { generateTransactionReference } from '@/utils/generators';
 import { NotFoundError, ValidationError, ConflictError } from '@/utils/errors';
 import { LedgerService } from '@/services/ledger/ledger.service';
 import { NotificationService } from '@/services/notifications/notification.service';
@@ -70,6 +71,8 @@ export class ContributionService {
       }
 
       const result = await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+        const depositRef = data.referenceNumber || generateTransactionReference(data.paymentMethod, 'CONTRIBUTION', data.paymentDate);
+        
         if (member.group.groupType === 'MICRO_SAVINGS' && microSavingsGoal.targetDate) {
           const pd = new Date(data.paymentDate);
           const paymentDay = new Date(pd.getFullYear(), pd.getMonth(), pd.getDate());
@@ -77,6 +80,7 @@ export class ContributionService {
           const targetDay = new Date(td.getFullYear(), td.getMonth(), td.getDate());
 
           if (paymentDay >= targetDay) {
+            const feeRef = data.referenceNumber || generateTransactionReference(data.paymentMethod, 'FEE', data.paymentDate);
             const deposit = await tx.savingsDeposit.create({
               data: {
                 savingsGoalId: microSavingsGoal.id,
@@ -84,7 +88,7 @@ export class ContributionService {
                 amount: data.amount,
                 currencyCode: data.currencyCode,
                 source: 'ADMIN_RECORDED_COMMISSION',
-                referenceNumber: data.referenceNumber,
+                referenceNumber: feeRef,
                 notes: data.notes || 'Admin commission (final day)',
                 depositDate: data.paymentDate,
               },
@@ -119,7 +123,7 @@ export class ContributionService {
             amount: data.amount,
             currencyCode: data.currencyCode,
             source: 'ADMIN_RECORDED',
-            referenceNumber: data.referenceNumber,
+            referenceNumber: depositRef,
             notes: data.notes,
             depositDate: data.paymentDate,
           }
@@ -213,6 +217,8 @@ export class ContributionService {
     const dueDate = this.calculateDueDate(startDate, cycleNumber, member.group.paymentFrequency);
     const hash = generateHash({ ...data, cycleNumber, dueDate });
 
+    const finalReferenceNumber = data.referenceNumber || generateTransactionReference(data.paymentMethod, 'CONTRIBUTION', data.paymentDate);
+
     // 5. Create/Update contribution record
     const result = await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const contribution = await tx.contribution.upsert({
@@ -225,12 +231,14 @@ export class ContributionService {
         },
         update: {
           ...data,
+          referenceNumber: finalReferenceNumber,
           dueDate,
           hash,
           status: 'COMPLETED',
         },
         create: {
           ...data,
+          referenceNumber: finalReferenceNumber,
           cycleNumber,
           dueDate,
           hash,
