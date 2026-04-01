@@ -47,6 +47,10 @@ export function EditMemberModal({ groupId, member, isOpen, onClose }: EditMember
             queryClient.invalidateQueries({ queryKey: ['group', groupId] });
             onClose();
         },
+        onError: (error: any) => {
+            const msg = error?.response?.data?.error?.message || error?.response?.data?.message || 'Update failed';
+            alert(msg);
+        }
     });
 
     if (!isOpen || !member) return null;
@@ -55,7 +59,7 @@ export function EditMemberModal({ groupId, member, isOpen, onClose }: EditMember
         e.preventDefault();
         mutation.mutate({
             ...formData,
-            payoutPosition: formData.payoutPosition ? parseInt(formData.payoutPosition) : null
+            payoutPosition: formData.payoutPosition ? parseInt(formData.payoutPosition, 10) : null
         });
     };
 
@@ -119,6 +123,20 @@ export function EditMemberModal({ groupId, member, isOpen, onClose }: EditMember
                             value={formData.accountNumber}
                             onChange={(e) => setFormData({ ...formData, accountNumber: e.target.value })}
                         />
+                    </div>
+
+                    <div className="space-y-1.5 focus-within:translate-x-1 transition-transform">
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 ml-1">{t('common.status')}</label>
+                        <select
+                            className="w-full bg-slate-800 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-indigo-500/50 transition-all"
+                            value={formData.status}
+                            onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                        >
+                            <option value="ACTIVE">{t('common.active', 'Active')}</option>
+                            <option value="PENDING">{t('common.pending', 'Pending')}</option>
+                            <option value="SUSPENDED">{t('common.suspended', 'Suspended')}</option>
+                            <option value="INACTIVE">{t('common.inactive', 'Inactive')}</option>
+                        </select>
                     </div>
 
                     <div className="space-y-3 pt-4 border-t border-white/5">

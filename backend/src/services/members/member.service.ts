@@ -302,7 +302,11 @@ export class MemberService {
     } = data;
     
     const updateData: any = {};
-    if (payoutPosition !== undefined) updateData.payoutPosition = parseInt(payoutPosition as string);
+    if (payoutPosition !== undefined && payoutPosition !== null && payoutPosition !== '') {
+      updateData.payoutPosition = parseInt(payoutPosition as string, 10);
+    } else if (payoutPosition === null || payoutPosition === '') {
+      updateData.payoutPosition = null;
+    }
     if (nationalId !== undefined) updateData.nationalId = nationalId;
     if (photoUrl !== undefined) updateData.photoUrl = photoUrl;
     if (dateOfBirth !== undefined) updateData.dateOfBirth = new Date(dateOfBirth);
