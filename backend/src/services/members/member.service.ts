@@ -261,6 +261,17 @@ export class MemberService {
       throw new ValidationError('Admin cannot remove themselves from the group');
     }
 
+    // Check if the member has any financial history
+    const contributionCount = await prisma.contribution.count({ where: { memberId } });
+    const transactionCount = await prisma.transaction.count({ where: { memberId } });
+    const withdrawalCount = await prisma.withdrawalRequest.count({ where: { memberId } });
+
+    if (contributionCount === 0 && transactionCount === 0 && withdrawalCount === 0) {
+      // Hard delete if no financial history exists
+      await prisma.member.delete({ where: { id: memberId } });
+      return { ...member, status: 'INACTIVE' };
+    }
+
     // Soft-delete: mark as INACTIVE to preserve financial history
     const updated = await prisma.member.update({
       where: { id: memberId },
@@ -364,6 +375,9 @@ export class MemberService {
     const whereClause: any = { groupId };
     if (status) {
       whereClause.status = status;
+    } else {
+      // By default, do not return INACTIVE members to keep the list clean
+      whereClause.status = { not: 'INACTIVE' };
     }
 
     return prisma.member.findMany({
