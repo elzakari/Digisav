@@ -29,6 +29,9 @@ router.patch('/members/:memberId/suspend', authenticate, controller.suspendMembe
 // Update member details (Admin only)
 router.patch('/members/:memberId', authenticate, controller.updateMember.bind(controller));
 
+// Remove a member (Admin only)
+router.delete('/members/:memberId', authenticate, controller.removeMember.bind(controller));
+
 // Bulk update members (Admin only)
 router.patch('/groups/:groupId/members/bulk', authenticate, requireGroupAdmin, controller.bulkUpdate.bind(controller));
 
