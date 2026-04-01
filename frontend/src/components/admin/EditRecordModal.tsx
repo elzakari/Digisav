@@ -91,10 +91,13 @@ export function EditRecordModal({ groupId, transaction, isOpen, onClose }: Props
       throw new Error('Unsupported transaction type');
     },
     onSuccess: async () => {
-      queryClient.invalidateQueries({ queryKey: ['group-transactions', groupId] });
-      queryClient.invalidateQueries({ queryKey: ['group-dashboard', groupId] });
-      queryClient.invalidateQueries({ queryKey: ['group-stats', groupId] });
-      queryClient.invalidateQueries({ queryKey: ['group-contributions', groupId] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['group-transactions', groupId] }),
+        queryClient.invalidateQueries({ queryKey: ['group-dashboard', groupId] }),
+        queryClient.invalidateQueries({ queryKey: ['group-stats', groupId] }),
+        queryClient.invalidateQueries({ queryKey: ['group-contributions', groupId] }),
+        queryClient.invalidateQueries({ queryKey: ['group', groupId] })
+      ]);
       publishAppEvent({ type: 'group_recordings_changed', groupId });
       toast.success(String(t('common.saved', { defaultValue: 'Saved' } as any)));
       onClose();
