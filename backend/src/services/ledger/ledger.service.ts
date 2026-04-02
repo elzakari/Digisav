@@ -27,7 +27,14 @@ export class LedgerService {
     // 2. Prepare hashing payload
     const timestamp = new Date();
     const payload = {
-      ...data,
+      groupId: data.groupId,
+      memberId: data.memberId,
+      transactionType: data.transactionType,
+      amount: data.amount,
+      currencyCode: data.currencyCode,
+      referenceId: data.referenceId,
+      recordedBy: data.recordedBy,
+      metadata: data.metadata,
       previousHash: previousTransaction?.hash || null,
       timestamp,
     };

@@ -13,7 +13,21 @@ export const updateContributionSchema = z
         paymentMethod: z.enum(['CASH', 'MOBILE_MONEY', 'BANK_TRANSFER']).optional(),
         referenceNumber: z.string().max(100).optional().nullable().or(z.literal('')),
         notes: z.string().max(1000).optional().nullable().or(z.literal('')),
+        publishToMemberDashboard: z.boolean().optional(),
       })
       .refine((b) => Object.keys(b).length > 0, { message: 'At least one field must be provided' }),
   });
 
+export const publishMicroSavingsSchema = z.object({
+  params: z.object({
+    groupId: z.string().uuid(),
+  }),
+  body: z
+    .object({
+      publishAll: z.boolean().optional(),
+      transactionIds: z.array(z.string().uuid()).optional(),
+    })
+    .refine((b) => b.publishAll === true || (Array.isArray(b.transactionIds) && b.transactionIds.length > 0), {
+      message: 'Provide publishAll=true or a non-empty transactionIds array',
+    }),
+});

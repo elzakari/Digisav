@@ -14,7 +14,7 @@ export class ContributionController {
     try {
       const userId = req.user!.id;
       const { groupId } = req.params as any;
-      const { memberId, amount, currencyCode, paymentDate, paymentMethod, referenceNumber, notes, isPersonalSavings } = req.body;
+      const { memberId, amount, currencyCode, paymentDate, paymentMethod, referenceNumber, notes, isPersonalSavings, publishToMemberDashboard } = req.body;
 
       const contribution = await this.contributionService.recordContribution({
         memberId,
@@ -27,6 +27,7 @@ export class ContributionController {
         notes,
         recordedBy: userId,
         isPersonalSavings,
+        publishToMemberDashboard,
       });
 
       res.status(201).json({
@@ -43,7 +44,7 @@ export class ContributionController {
       const userId = req.user!.id;
       const userRole = req.user!.role;
       const { groupId, contributionId } = req.params as any;
-      const { amount, paymentDate, paymentMethod, referenceNumber, notes } = req.body;
+      const { amount, paymentDate, paymentMethod, referenceNumber, notes, publishToMemberDashboard } = req.body;
 
       const updated = await this.contributionService.updateContribution({
         groupId,
@@ -55,9 +56,55 @@ export class ContributionController {
         ...(paymentMethod ? { paymentMethod: paymentMethod as PaymentMethod } : {}),
         ...(referenceNumber !== undefined ? { referenceNumber } : {}),
         ...(notes !== undefined ? { notes } : {}),
+        ...(publishToMemberDashboard !== undefined ? { publishToMemberDashboard } : {}),
       });
 
       res.status(200).json({ success: true, data: updated });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getUnpublishedMicroSavings(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user!.id;
+      const userRole = req.user!.role;
+      const { groupId } = req.params as any;
+      const data = await this.contributionService.getUnpublishedMicroSavings(groupId, userId, userRole);
+      res.status(200).json({ success: true, data });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async publishMicroSavings(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user!.id;
+      const userRole = req.user!.role;
+      const { groupId } = req.params as any;
+      const { publishAll, transactionIds } = req.body as any;
+
+      const result = await this.contributionService.publishMicroSavings({
+        groupId,
+        userId,
+        userRole,
+        publishAll: publishAll === true,
+        transactionIds: Array.isArray(transactionIds) ? transactionIds : undefined,
+      });
+
+      res.status(200).json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async recalculateMicroSavingsBalances(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user!.id;
+      const userRole = req.user!.role;
+      const { groupId } = req.params as any;
+      const result = await this.contributionService.recalculateMicroSavingsBalances(groupId, userId, userRole);
+      res.status(200).json({ success: true, data: result });
     } catch (error) {
       next(error);
     }

@@ -1,5 +1,5 @@
 import { formatDistanceToNow } from 'date-fns';
-import { ArrowDownLeft, ArrowUpRight, User } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, RefreshCcw, User } from 'lucide-react';
 import { formatCurrency } from '@/utils/currencyFormatter';
 import { useTranslation } from 'react-i18next';
 
@@ -33,23 +33,43 @@ export function RecentActivityPanel({ items, currencyCode }: RecentActivityPanel
       <div className="divide-y divide-white/5">
         {items.map((it) => {
           const ts = typeof it.timestamp === 'string' ? new Date(it.timestamp) : it.timestamp;
+          const rawAmount = Number(it.amount || 0);
           const isPayout = it.transactionType === 'PAYOUT';
+          const isAdjustment = it.transactionType === 'ADJUSTMENT';
+          const isNegativeUpdate = isAdjustment && rawAmount < 0;
           const memberName = it.member?.user?.fullName || String(t('common.unknown', { defaultValue: 'Unknown' } as any));
           const recorderName = it.recorder?.fullName || String(t('common.system', { defaultValue: 'System' } as any));
+
+          const amountPrefix = isPayout ? '-' : rawAmount < 0 ? '-' : '+';
+          const amountClasses = isPayout || isNegativeUpdate
+            ? 'text-rose-300'
+            : isAdjustment
+              ? 'text-amber-300'
+              : 'text-emerald-300';
+
+          const iconShellClasses = isPayout
+            ? 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+            : isAdjustment
+              ? isNegativeUpdate
+                ? 'bg-rose-500/10 border-rose-500/20 text-rose-300'
+                : 'bg-amber-500/10 border-amber-500/20 text-amber-300'
+              : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300';
 
           return (
             <div key={it.id} className="px-6 py-4 hover:bg-white/[0.02] transition-colors">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-start gap-3">
-                  <div className={`w-9 h-9 rounded-xl border flex items-center justify-center ${isPayout ? 'bg-rose-500/10 border-rose-500/20 text-rose-300' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'}`}>
-                    {isPayout ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownLeft className="w-4 h-4" />}
+                  <div className={`w-9 h-9 rounded-xl border flex items-center justify-center ${iconShellClasses}`}>
+                    {isPayout ? <ArrowUpRight className="w-4 h-4" /> : isAdjustment ? <RefreshCcw className="w-4 h-4" /> : <ArrowDownLeft className="w-4 h-4" />}
                   </div>
 
                   <div>
                     <div className="text-sm font-semibold text-white">
                       {isPayout
                         ? String(t('admin_dashboard.payout_recorded', { defaultValue: 'Payout recorded' } as any))
-                        : String(t('admin_dashboard.contribution_recorded', { defaultValue: 'Contribution recorded' } as any))}
+                        : isAdjustment
+                          ? String(t('admin_dashboard.record_update', { defaultValue: 'Record updated' } as any))
+                          : String(t('admin_dashboard.contribution_recorded', { defaultValue: 'Contribution recorded' } as any))}
                     </div>
                     <div className="text-xs text-slate-500 mt-1 flex items-center gap-2">
                       <span className="inline-flex items-center gap-1">
@@ -65,8 +85,8 @@ export function RecentActivityPanel({ items, currencyCode }: RecentActivityPanel
                 </div>
 
                 <div className="text-right">
-                  <div className={`text-sm font-black tabular-nums ${isPayout ? 'text-rose-300' : 'text-emerald-300'}`}>
-                    {isPayout ? '-' : '+'}{formatCurrency(it.amount, 0, currencyCode)}
+                  <div className={`text-sm font-black tabular-nums ${amountClasses}`}>
+                    {amountPrefix}{formatCurrency(Math.abs(rawAmount), 0, currencyCode)}
                   </div>
                   <div className="text-xs text-slate-500 mt-1">{formatDistanceToNow(ts, { addSuffix: true })}</div>
                 </div>

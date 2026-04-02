@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { userService } from '../../services/user.service';
 import { authService } from '../../services/auth.service';
 import { toast } from 'react-hot-toast';
+import { COUNTRIES, getCountryOption } from '@/constants/countries';
 
 export function SettingsPage() {
     const { t, i18n } = useTranslation();
@@ -30,6 +31,7 @@ export function SettingsPage() {
     const [language, setLanguage] = useState(profile?.language || 'en');
     const [theme, setTheme] = useState(profile?.theme || 'dark');
     const [currency, setCurrency] = useState(profile?.defaultCurrency || 'KES');
+    const [countryCode, setCountryCode] = useState(profile?.countryCode || '');
     
     // Account details state
     const [fullName, setFullName] = useState(profile?.fullName || '');
@@ -40,6 +42,7 @@ export function SettingsPage() {
             setLanguage(profile.language);
             setTheme(profile.theme);
             setCurrency(profile.defaultCurrency);
+            setCountryCode(profile.countryCode || '');
             setFullName(profile.fullName || '');
             setPhoneNumber(profile.phoneNumber || '');
             
@@ -63,6 +66,25 @@ export function SettingsPage() {
         setLanguage(newLang);
         i18n.changeLanguage(newLang);
         updateSettingsMutation.mutate({ language: newLang });
+    };
+
+    const handleCountryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const next = e.target.value;
+        setCountryCode(next);
+
+        const opt = getCountryOption(next);
+        const nextLang = opt?.language || 'en';
+        const nextCurrency = opt?.currencyCode || 'KES';
+
+        setLanguage(nextLang);
+        setCurrency(nextCurrency);
+        i18n.changeLanguage(nextLang);
+
+        updateSettingsMutation.mutate({
+            countryCode: next,
+            language: nextLang,
+            defaultCurrency: nextCurrency,
+        });
     };
 
     const handleThemeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -156,6 +178,29 @@ export function SettingsPage() {
                     </div>
 
                     <div className="space-y-6">
+                        <div className="space-y-2">
+                            <label className="text-sm font-bold text-slate-400 uppercase tracking-widest ml-1">
+                                {String(t('settings.country', { defaultValue: 'Country' } as any))}
+                            </label>
+                            <select
+                                value={countryCode}
+                                onChange={handleCountryChange}
+                                className="w-full glass-input bg-[#1e1b4b] appearance-none"
+                            >
+                                <option value="" disabled>
+                                    {String(t('settings.select_country', { defaultValue: 'Select country' } as any))}
+                                </option>
+                                {COUNTRIES.map((c) => (
+                                    <option key={c.code} value={c.code}>
+                                        {c.name}
+                                    </option>
+                                ))}
+                            </select>
+                            <p className="text-[10px] text-slate-500 mt-2 italic">
+                                * {String(t('settings.country_affects_defaults', { defaultValue: 'Changing country updates default language and currency.' } as any))}
+                            </p>
+                        </div>
+
                         <div className="space-y-2">
                             <label className="text-sm font-bold text-slate-400 uppercase tracking-widest ml-1">{t('settings.theme')}</label>
                             <select 

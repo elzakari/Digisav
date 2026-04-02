@@ -26,7 +26,7 @@ export class GroupController {
   async getMyGroups(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const userId = req.user!.id;
-      const groups = await this.groupService.getUserGroups(userId);
+      const groups = await this.groupService.getUserGroups(userId, req.user!.role);
 
       res.status(200).json({
         success: true,

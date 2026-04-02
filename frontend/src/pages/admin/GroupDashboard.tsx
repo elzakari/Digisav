@@ -15,6 +15,7 @@ import { WithdrawalRequestsTab } from '@/components/admin/WithdrawalRequestsTab'
 import { SendNotificationModal } from '@/components/admin/SendNotificationModal';
 import { InviteMembersModal } from '@/components/admin/InviteMembersModal';
 import { ReportsModal } from '@/components/admin/ReportsModal';
+import { PublishRecordsModal } from '@/components/admin/PublishRecordsModal';
 import { formatCurrency } from '@/utils/currencyFormatter';
 import { KpiCard } from '@/components/admin/dashboard/KpiCard';
 import { ContributionsStatusPanel } from '@/components/admin/dashboard/ContributionsStatusPanel';
@@ -103,6 +104,7 @@ export function GroupDashboard() {
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
   const [isBulkProcessing, setIsBulkProcessing] = useState(false);
   const [isReportsModalOpen, setIsReportsModalOpen] = useState(false);
+  const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
   const [cycleFilter, setCycleFilter] = useState<'due' | 'paid' | 'past_due'>('due');
 
   const toggleSelectMember = (memberId: string) => {
@@ -264,6 +266,15 @@ export function GroupDashboard() {
               <FileDown className="w-4 h-4" />
               {t('dashboard.export_report')}
             </button>
+            {groupType === 'MICRO_SAVINGS' ? (
+              <button
+                onClick={() => setIsPublishModalOpen(true)}
+                className="glass-button btn-warning px-5 py-2.5 text-sm rounded-2xl flex items-center gap-2"
+              >
+                <Wallet className="w-4 h-4" />
+                {String(t('admin.publish', { defaultValue: 'Publish' } as any))}
+              </button>
+            ) : null}
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <button
@@ -439,14 +450,53 @@ export function GroupDashboard() {
                   </div>
 
                   <div className="text-right flex-shrink-0">
-                    <div className={`text-sm font-bold tabular-nums ${c.transactionType === 'PAYOUT' ? 'text-rose-400' : 'text-emerald-400'}`}>
-                      {c.transactionType === 'PAYOUT' ? '-' : '+'}{formatCurrency(c.amount, 0, c.currencyCode)}
-                    </div>
+                    {(() => {
+                      const rawAmount = Number(c.amount || 0);
+                      const isAdjustment = c.transactionType === 'ADJUSTMENT';
+                      const isPayout = c.transactionType === 'PAYOUT';
+                      const isNegativeUpdate = isAdjustment && rawAmount < 0;
+                      const amountPrefix = isPayout ? '-' : rawAmount < 0 ? '-' : '+';
+                      const amountClasses = isPayout || isNegativeUpdate
+                        ? 'text-rose-400'
+                        : isAdjustment
+                          ? 'text-amber-400'
+                          : 'text-emerald-400';
+
+                      return (
+                        <div className={`text-sm font-bold tabular-nums ${amountClasses}`}>
+                          {amountPrefix}{formatCurrency(Math.abs(rawAmount), 0, c.currencyCode)}
+                        </div>
+                      );
+                    })()}
                     <div className="mt-2">
-                      <span className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg border ${c.transactionType === 'PAYOUT' ? 'bg-rose-500/20 text-rose-400 border-rose-500/30' : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'}`}>
-                        {c.transactionType === 'PAYOUT' ? t('common.payout') : t('common.completed')}
-                      </span>
+                      {(() => {
+                        const rawAmount = Number(c.amount || 0);
+                        const isAdjustment = c.transactionType === 'ADJUSTMENT';
+                        const isPayout = c.transactionType === 'PAYOUT';
+                        const isNegativeUpdate = isAdjustment && rawAmount < 0;
+
+                        const pillClasses = isPayout
+                          ? 'bg-rose-500/20 text-rose-400 border-rose-500/30'
+                          : isAdjustment
+                            ? isNegativeUpdate
+                              ? 'bg-rose-500/20 text-rose-400 border-rose-500/30'
+                              : 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+                            : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
+
+                        const label = isPayout
+                          ? t('common.payout')
+                          : isAdjustment
+                            ? String(t('common.update', { defaultValue: 'Update' } as any))
+                            : t('common.completed');
+
+                        return (
+                          <span className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg border ${pillClasses}`}>
+                            {label}
+                          </span>
+                        );
+                      })()}
                     </div>
+
                     {(c.transactionType === 'PAYOUT' || c.transactionType === 'CONTRIBUTION') && (
                       <button
                         onClick={() => setEditingTransaction(c)}
@@ -492,17 +542,55 @@ export function GroupDashboard() {
                       </div>
                     </td>
                     <td className="px-6 md:px-8 py-5 text-sm font-semibold text-slate-200">
-                      <span className={c.transactionType === 'PAYOUT' ? 'text-rose-400' : 'text-emerald-400'}>
-                        {c.transactionType === 'PAYOUT' ? '-' : '+'}{formatCurrency(c.amount, 0, c.currencyCode)}
-                      </span>
+                      {(() => {
+                        const rawAmount = Number(c.amount || 0);
+                        const isAdjustment = c.transactionType === 'ADJUSTMENT';
+                        const isPayout = c.transactionType === 'PAYOUT';
+                        const isNegativeUpdate = isAdjustment && rawAmount < 0;
+                        const amountPrefix = isPayout ? '-' : rawAmount < 0 ? '-' : '+';
+                        const amountClasses = isPayout || isNegativeUpdate
+                          ? 'text-rose-400'
+                          : isAdjustment
+                            ? 'text-amber-400'
+                            : 'text-emerald-400';
+
+                        return (
+                          <span className={amountClasses}>
+                            {amountPrefix}{formatCurrency(Math.abs(rawAmount), 0, c.currencyCode)}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="px-6 md:px-8 py-5 text-sm text-slate-400 uppercase tracking-tighter">
                       {c.metadata?.paymentMethod || 'BANK'}
                     </td>
                     <td className="px-6 md:px-8 py-5">
-                      <span className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg ${c.transactionType === 'PAYOUT' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'}`}>
-                        {c.transactionType === 'PAYOUT' ? t('common.payout') : t('common.completed')}
-                      </span>
+                      {(() => {
+                        const rawAmount = Number(c.amount || 0);
+                        const isAdjustment = c.transactionType === 'ADJUSTMENT';
+                        const isPayout = c.transactionType === 'PAYOUT';
+                        const isNegativeUpdate = isAdjustment && rawAmount < 0;
+
+                        const pillClasses = isPayout
+                          ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                          : isAdjustment
+                            ? isNegativeUpdate
+                              ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                              : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                            : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
+
+                        const label = isPayout
+                          ? t('common.payout')
+                          : isAdjustment
+                            ? String(t('common.update', { defaultValue: 'Update' } as any))
+                            : t('common.completed');
+
+                        return (
+                          <span className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg ${pillClasses}`}>
+                            {label}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="px-6 md:px-8 py-5 text-right">
                       {(c.transactionType === 'PAYOUT' || c.transactionType === 'CONTRIBUTION') ? (
@@ -944,6 +1032,13 @@ export function GroupDashboard() {
         isOpen={isReportsModalOpen}
         onClose={() => setIsReportsModalOpen(false)}
         groupId={groupId!}
+      />
+
+      <PublishRecordsModal
+        isOpen={isPublishModalOpen}
+        onClose={() => setIsPublishModalOpen(false)}
+        groupId={groupId!}
+        currencyCode={currencyCode}
       />
     </div>
   );

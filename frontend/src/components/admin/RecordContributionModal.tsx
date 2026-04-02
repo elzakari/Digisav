@@ -23,6 +23,7 @@ export function RecordContributionModal({ groupId, members, currencyCode, isOpen
         referenceNumber: '',
         notes: '',
         isPersonalSavings: false,
+        publishToMemberDashboard: true,
     });
 
     const mutation = useMutation({
@@ -55,6 +56,7 @@ export function RecordContributionModal({ groupId, members, currencyCode, isOpen
             currencyCode,
             paymentMethod,
             paymentDate: new Date(formData.paymentDate).toISOString(),
+            publishToMemberDashboard: formData.isPersonalSavings ? formData.publishToMemberDashboard : undefined,
         });
     };
 
@@ -208,6 +210,25 @@ export function RecordContributionModal({ groupId, members, currencyCode, isOpen
                             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                         />
                     </div>
+
+                    {formData.isPersonalSavings ? (
+                      <label className="flex items-center justify-between gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
+                        <div>
+                          <div className="text-[10px] font-black uppercase tracking-widest text-slate-300">
+                            {String(t('admin.publish_to_members', { defaultValue: 'Publish to members' } as any))}
+                          </div>
+                          <div className="text-[10px] text-slate-500 mt-0.5">
+                            {String(t('admin.publish_to_members_hint', { defaultValue: 'If off, members will not see this until you publish it.' } as any))}
+                          </div>
+                        </div>
+                        <input
+                          type="checkbox"
+                          className="w-4 h-4 rounded border-white/20 bg-transparent text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                          checked={!!formData.publishToMemberDashboard}
+                          onChange={(e) => setFormData({ ...formData, publishToMemberDashboard: e.target.checked })}
+                        />
+                      </label>
+                    ) : null}
 
                     <div className="pt-2">
                         <button

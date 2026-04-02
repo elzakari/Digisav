@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { ContributionController } from '@/api/controllers/contribution.controller';
 import { authenticate, requireGroupAdmin, requireGroupMember } from '@/api/middleware/auth.middleware';
 import { validateRequest } from '@/api/middleware/validation.middleware';
-import { updateContributionSchema } from '@/api/validators/contribution.validators';
+import { publishMicroSavingsSchema, updateContributionSchema } from '@/api/validators/contribution.validators';
 
 const router = Router();
 const controller = new ContributionController();
@@ -11,6 +11,25 @@ const controller = new ContributionController();
 // router.use(authenticate);
 
 router.post('/groups/:groupId/contributions', authenticate, requireGroupAdmin, controller.recordContribution.bind(controller));
+router.get(
+  '/groups/:groupId/publish/pending',
+  authenticate,
+  requireGroupAdmin,
+  controller.getUnpublishedMicroSavings.bind(controller)
+);
+router.post(
+  '/groups/:groupId/publish',
+  authenticate,
+  requireGroupAdmin,
+  validateRequest(publishMicroSavingsSchema),
+  controller.publishMicroSavings.bind(controller)
+);
+router.post(
+  '/groups/:groupId/micro-savings/recalculate',
+  authenticate,
+  requireGroupAdmin,
+  controller.recalculateMicroSavingsBalances.bind(controller)
+);
 router.patch(
   '/groups/:groupId/contributions/:contributionId',
   authenticate,

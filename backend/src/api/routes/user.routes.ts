@@ -14,6 +14,7 @@ const updateProfileSchema = z.object({
         language: z.string().optional(),
         theme: z.string().optional(),
         defaultCurrency: z.string().optional(),
+        countryCode: z.string().length(2).optional(),
     }),
 });
 

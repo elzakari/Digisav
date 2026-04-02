@@ -75,6 +75,18 @@ export class AuthService {
     // Find user
     const user = await prisma.user.findUnique({
       where: { email },
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        role: true,
+        status: true,
+        passwordHash: true,
+        defaultCurrency: true,
+        language: true,
+        countryCode: true,
+        theme: true,
+      }
     });
 
     if (!user) {
@@ -108,6 +120,10 @@ export class AuthService {
         email: user.email,
         fullName: user.fullName,
         role: user.role,
+        defaultCurrency: user.defaultCurrency,
+        language: user.language,
+        countryCode: user.countryCode,
+        theme: user.theme,
       },
       accessToken,
       refreshToken,

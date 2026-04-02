@@ -17,6 +17,7 @@ interface RecordContributionData {
   recordedBy: string;
   notes?: string;
   isPersonalSavings?: boolean;
+  publishToMemberDashboard?: boolean;
 }
 
 interface UpdateContributionData {
@@ -29,7 +30,16 @@ interface UpdateContributionData {
   paymentMethod?: PaymentMethod;
   referenceNumber?: string | null;
   notes?: string | null;
+  publishToMemberDashboard?: boolean;
 }
+
+type PublishMicroSavingsArgs = {
+  groupId: string;
+  userId: string;
+  userRole: string;
+  publishAll: boolean;
+  transactionIds?: string[];
+};
 
 export class ContributionService {
   private ledgerService: LedgerService;
@@ -40,6 +50,212 @@ export class ContributionService {
     this.ledgerService = ledgerService || new LedgerService();
     this.prisma = prismaClient || prisma;
     this.notificationService = new NotificationService();
+  }
+
+  async getUnpublishedMicroSavings(groupId: string, userId: string, userRole: string) {
+    const group = await this.prisma.group.findUnique({ where: { id: groupId } });
+    if (!group) throw new NotFoundError('Group');
+
+    const canEdit = group.adminUserId === userId || userRole === 'SYS_ADMIN' || userRole === 'ADMIN';
+    if (!canEdit) throw new ValidationError('Insufficient permissions');
+
+    const rows = await this.prisma.$queryRaw<Array<any>>(
+      Prisma.sql`
+        SELECT
+          t."id",
+          t."timestamp",
+          t."transactionType",
+          t."amount",
+          t."currencyCode",
+          t."referenceId",
+          t."metadata",
+          m."id" AS "memberId",
+          u."fullName" AS "memberName"
+        FROM "transactions" t
+        LEFT JOIN "members" m ON m."id" = t."memberId"
+        LEFT JOIN "users" u ON u."id" = m."userId"
+        WHERE t."groupId"::text = ${groupId}
+          AND t."isPublished" = false
+          AND (
+            (t."transactionType" = 'CONTRIBUTION' AND (t."metadata"->>'type') = 'PERSONAL_SAVINGS')
+            OR (t."transactionType" = 'ADJUSTMENT' AND (t."metadata"->>'type') = 'DEPOSIT_EDIT')
+            OR (t."transactionType" = 'FEE' AND (t."metadata"->>'type') = 'MICRO_SAVINGS_COMMISSION')
+          )
+        ORDER BY t."timestamp" DESC
+      `
+    );
+
+    return rows.map((r) => ({
+      id: r.id,
+      timestamp: r.timestamp,
+      transactionType: r.transactionType,
+      amount: Number(r.amount || 0),
+      currencyCode: r.currencyCode,
+      referenceId: r.referenceId,
+      metadata: r.metadata,
+      member: { id: r.memberId, user: { fullName: r.memberName } },
+    }));
+  }
+
+  async publishMicroSavings(args: PublishMicroSavingsArgs) {
+    const group = await this.prisma.group.findUnique({ where: { id: args.groupId } });
+    if (!group) throw new NotFoundError('Group');
+
+    const canEdit = group.adminUserId === args.userId || args.userRole === 'SYS_ADMIN' || args.userRole === 'ADMIN';
+    if (!canEdit) throw new ValidationError('Insufficient permissions');
+
+    const now = new Date();
+
+    return this.prisma.$transaction(async (tx) => {
+      const scopeWhere = args.publishAll
+        ? Prisma.sql`true`
+        : Prisma.sql`"id"::text IN (${Prisma.join(args.transactionIds || [])})`;
+
+      const unpublished = await tx.$queryRaw<Array<any>>(
+        Prisma.sql`
+          SELECT "id", "transactionType", "amount", "referenceId", "metadata"
+          FROM "transactions"
+          WHERE "groupId"::text = ${args.groupId}
+            AND "isPublished" = false
+            AND ${scopeWhere}
+        `
+      );
+
+      if (!unpublished.length) {
+        return { publishedCount: 0 };
+      }
+
+      const depositIds = Array.from(
+        new Set(unpublished.map((t) => t.referenceId).filter(Boolean))
+      ) as string[];
+
+      const depositIdsBeingPublished = new Set<string>(
+        unpublished
+          .filter((t) => {
+            const meta = (t.metadata || {}) as any;
+            return t.transactionType === 'CONTRIBUTION' && meta.type === 'PERSONAL_SAVINGS' && t.referenceId;
+          })
+          .map((t) => t.referenceId as string)
+      );
+
+      const deposits = depositIds.length
+        ? await tx.$queryRaw<Array<any>>(
+            Prisma.sql`
+              SELECT d."id", d."amount", d."savingsGoalId", d."isPublished", g."groupId"
+              FROM "savings_deposits" d
+              JOIN "savings_goals" g ON g."id" = d."savingsGoalId"
+              WHERE d."id"::text IN (${Prisma.join(depositIds)})
+            `
+          )
+        : [];
+
+      const depositById = new Map<string, { amount: number; savingsGoalId: string; isPublished: boolean }>();
+      for (const d of deposits) {
+        if (d.groupId !== args.groupId) continue;
+        depositById.set(d.id, { amount: Number(d.amount || 0), savingsGoalId: d.savingsGoalId, isPublished: d.isPublished === true });
+      }
+
+      for (const t of unpublished) {
+        const meta = (t.metadata || {}) as any;
+        const type = meta.type;
+        const referenceId = t.referenceId as string | null;
+        const txAmount = Number(t.amount || 0);
+
+        if (type === 'PERSONAL_SAVINGS' && t.transactionType === 'CONTRIBUTION' && referenceId) {
+          const dep = depositById.get(referenceId);
+          if (dep) {
+            await tx.savingsGoal.update({
+              where: { id: dep.savingsGoalId },
+              data: { currentAmount: { increment: dep.amount } } as any,
+            });
+            await tx.$executeRaw(
+              Prisma.sql`
+                UPDATE "savings_deposits"
+                SET "isPublished" = true,
+                    "publishedAt" = ${now}
+                WHERE "id"::text = ${referenceId}
+              `
+            );
+          }
+        }
+
+        if (type === 'DEPOSIT_EDIT' && t.transactionType === 'ADJUSTMENT' && referenceId) {
+          const dep = depositById.get(referenceId);
+          if (dep) {
+            const shouldApplyDelta = dep.isPublished && !depositIdsBeingPublished.has(referenceId);
+            if (shouldApplyDelta) {
+              await tx.savingsGoal.update({
+                where: { id: dep.savingsGoalId },
+                data: { currentAmount: { increment: txAmount } } as any,
+              });
+            }
+          }
+        }
+
+        await tx.$executeRaw(
+          Prisma.sql`
+            UPDATE "transactions"
+            SET "isPublished" = true,
+                "publishedAt" = ${now}
+            WHERE "id"::text = ${t.id}
+          `
+        );
+      }
+
+      return { publishedCount: unpublished.length };
+    });
+  }
+
+  async recalculateMicroSavingsBalances(groupId: string, userId: string, userRole: string) {
+    const group = await this.prisma.group.findUnique({ where: { id: groupId } });
+    if (!group) throw new NotFoundError('Group');
+
+    const canEdit = group.adminUserId === userId || userRole === 'SYS_ADMIN' || userRole === 'ADMIN';
+    if (!canEdit) throw new ValidationError('Insufficient permissions');
+
+    const goals = await this.prisma.savingsGoal.findMany({
+      where: {
+        groupId,
+        category: 'MICRO_SAVINGS' as any,
+        status: 'ACTIVE' as any,
+      } as any,
+      select: { id: true, userId: true },
+    });
+
+    if (goals.length === 0) return { updatedGoals: 0 };
+
+    const userIds = goals.map((g) => g.userId);
+
+    const depositSums = await this.prisma.$queryRaw<Array<{ userId: string; total: any }>>(
+      Prisma.sql`
+        SELECT d."userId", COALESCE(SUM(d."amount"), 0) AS total
+        FROM "savings_deposits" d
+        JOIN "savings_goals" g ON g."id" = d."savingsGoalId"
+        WHERE g."groupId"::text = ${groupId}
+          AND g."category" = 'MICRO_SAVINGS'
+          AND g."status" = 'ACTIVE'
+          AND d."isPublished" = true
+          AND d."userId"::text IN (${Prisma.join(userIds)})
+        GROUP BY d."userId"
+      `
+    );
+
+    const userIdToTotal = new Map<string, number>();
+    for (const row of depositSums) {
+      userIdToTotal.set(row.userId, Number(row.total || 0));
+    }
+
+    let updatedGoals = 0;
+    for (const g of goals) {
+      const total = userIdToTotal.get(g.userId) || 0;
+      await this.prisma.savingsGoal.update({
+        where: { id: g.id },
+        data: { currentAmount: total } as any,
+      });
+      updatedGoals += 1;
+    }
+
+    return { updatedGoals };
   }
 
   async recordContribution(data: RecordContributionData) {
@@ -56,6 +272,7 @@ export class ContributionService {
     const startDate = member.group.startDate ? new Date(member.group.startDate) : new Date();
 
     if (data.isPersonalSavings) {
+      const shouldPublish = data.publishToMemberDashboard !== false;
       // Handle Personal Savings (Micro-Savings)
       const microSavingsGoal = await this.prisma.savingsGoal.findFirst({
         where: {
@@ -94,8 +311,19 @@ export class ContributionService {
               },
             });
 
+            if (!shouldPublish) {
+              await tx.$executeRaw(
+                Prisma.sql`
+                  UPDATE "savings_deposits"
+                  SET "isPublished" = false,
+                      "publishedAt" = NULL
+                  WHERE "id"::text = ${deposit.id}
+                `
+              );
+            }
+
             const ledgerService = new LedgerService(tx as any);
-            await ledgerService.createTransaction({
+            const feeTx = await ledgerService.createTransaction({
               groupId: data.groupId,
               memberId: data.memberId,
               transactionType: TransactionType.FEE,
@@ -110,6 +338,17 @@ export class ContributionService {
                 paymentMethod: data.paymentMethod,
               },
             });
+
+            if (!shouldPublish) {
+              await tx.$executeRaw(
+                Prisma.sql`
+                  UPDATE "transactions"
+                  SET "isPublished" = false,
+                      "publishedAt" = NULL
+                  WHERE "id"::text = ${feeTx.id}
+                `
+              );
+            }
 
             return deposit;
           }
@@ -129,16 +368,28 @@ export class ContributionService {
           }
         });
 
-        // 2. Update Goal Current Amount
-        const newAmount = Number(microSavingsGoal.currentAmount) + Number(data.amount);
-        await tx.savingsGoal.update({
-          where: { id: microSavingsGoal.id },
-          data: { currentAmount: newAmount }
-        });
+        if (!shouldPublish) {
+          await tx.$executeRaw(
+            Prisma.sql`
+              UPDATE "savings_deposits"
+              SET "isPublished" = false,
+                  "publishedAt" = NULL
+              WHERE "id"::text = ${deposit.id}
+            `
+          );
+        }
+
+        if (shouldPublish) {
+          const newAmount = Number(microSavingsGoal.currentAmount) + Number(data.amount);
+          await tx.savingsGoal.update({
+            where: { id: microSavingsGoal.id },
+            data: { currentAmount: newAmount }
+          });
+        }
 
         // 3. Create transaction in ledger
         const ledgerService = new LedgerService(tx as any);
-        await ledgerService.createTransaction({
+        const depositTx = await ledgerService.createTransaction({
           groupId: data.groupId,
           memberId: data.memberId,
           transactionType: TransactionType.CONTRIBUTION, // Reusing CONTRIBUTION for now
@@ -154,20 +405,32 @@ export class ContributionService {
           },
         });
 
+        if (!shouldPublish) {
+          await tx.$executeRaw(
+            Prisma.sql`
+              UPDATE "transactions"
+              SET "isPublished" = false,
+                  "publishedAt" = NULL
+              WHERE "id"::text = ${depositTx.id}
+            `
+          );
+        }
+
         return deposit;
       });
 
-      // Notify Member
-      try {
-        await this.notificationService.createNotification({
-          userId: member.userId,
-          groupId: data.groupId,
-          type: 'PAYMENT_RECEIVED',
-          title: 'Personal Savings Recorded',
-          body: `A personal savings deposit of ${data.currencyCode} ${data.amount} has been added to your account.`,
-        });
-      } catch (err) {
-        console.error('Failed to notify member', err);
+      if (shouldPublish) {
+        try {
+          await this.notificationService.createNotification({
+            userId: member.userId,
+            groupId: data.groupId,
+            type: 'PAYMENT_RECEIVED',
+            title: 'Personal Savings Recorded',
+            body: `A personal savings deposit of ${data.currencyCode} ${data.amount} has been added to your account.`,
+          });
+        } catch (err) {
+          console.error('Failed to notify member', err);
+        }
       }
 
       return result;
@@ -371,6 +634,7 @@ export class ContributionService {
     if (!canEdit) throw new ValidationError('Insufficient permissions to update record');
 
     if (group.groupType === 'MICRO_SAVINGS') {
+      const shouldPublish = data.publishToMemberDashboard !== false;
       const existingDeposit = await this.prisma.savingsDeposit.findUnique({
         where: { id: data.contributionId },
         include: { savingsGoal: true },
@@ -386,6 +650,13 @@ export class ContributionService {
       const nextNotes = data.notes !== undefined ? data.notes : existingDeposit.notes;
 
       return await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+        const publishRow = await tx.$queryRaw<Array<{ isPublished: boolean | null }>>(
+          Prisma.sql`
+            SELECT "isPublished" FROM "savings_deposits" WHERE "id"::text = ${existingDeposit.id} LIMIT 1
+          `
+        );
+        const depositIsPublished = publishRow?.[0]?.isPublished === true;
+
         const deposit = await tx.savingsDeposit.update({
           where: { id: existingDeposit.id },
           data: {
@@ -399,16 +670,29 @@ export class ContributionService {
         const delta = Number(nextAmount) - Number(existingDeposit.amount);
 
         if (delta !== 0) {
-          const newAmount = Number(existingDeposit.savingsGoal.currentAmount) + delta;
-          await tx.savingsGoal.update({
-            where: { id: existingDeposit.savingsGoalId },
-            data: { currentAmount: newAmount }
-          });
-          
+          if (depositIsPublished && shouldPublish) {
+            const newAmount = Number(existingDeposit.savingsGoal.currentAmount) + delta;
+            await tx.savingsGoal.update({
+              where: { id: existingDeposit.savingsGoalId },
+              data: { currentAmount: newAmount }
+            });
+          }
+
           const ledgerService = new LedgerService(tx as any);
-          await ledgerService.createTransaction({
+
+          const member = await tx.member.findUnique({
+            where: {
+              groupId_userId: {
+                groupId: data.groupId,
+                userId: existingDeposit.userId,
+              },
+            },
+            select: { id: true },
+          });
+
+          const adjTx = await ledgerService.createTransaction({
             groupId: data.groupId,
-            memberId: existingDeposit.savingsGoal.memberId,
+            memberId: member?.id,
             transactionType: TransactionType.ADJUSTMENT,
             amount: delta,
             currencyCode: existingDeposit.currencyCode,
@@ -431,6 +715,17 @@ export class ContributionService {
               },
             },
           });
+
+          if (!shouldPublish || !depositIsPublished) {
+            await tx.$executeRaw(
+              Prisma.sql`
+                UPDATE "transactions"
+                SET "isPublished" = false,
+                    "publishedAt" = NULL
+                WHERE "id"::text = ${adjTx.id}
+              `
+            );
+          }
         }
 
         return deposit;

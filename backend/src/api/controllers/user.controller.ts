@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import prisma from '@/lib/prisma';
 import bcrypt from 'bcrypt';
 import { NotFoundError, ValidationError } from '@/utils/errors';
+import { getDefaultsForCountry, normalizeCountry } from '@/utils/countryDefaults';
 
 const SALT_ROUNDS = 12;
 
@@ -42,9 +43,22 @@ export class UserController {
             const userId = (req as any).user.id;
             const { fullName, phoneNumber, language, theme, defaultCurrency, countryCode } = req.body;
 
+            const normalizedCountry = normalizeCountry(countryCode);
+            const defaults = normalizedCountry ? getDefaultsForCountry(normalizedCountry) : null;
+            if (countryCode !== undefined && !defaults) {
+                throw new ValidationError('Unsupported countryCode');
+            }
+
             const updated = await prisma.user.update({
                 where: { id: userId },
-                data: { fullName, phoneNumber, language, theme, defaultCurrency, countryCode },
+                data: {
+                    fullName,
+                    phoneNumber,
+                    theme,
+                    countryCode: defaults ? defaults.countryCode : countryCode,
+                    language: defaults ? defaults.language : language,
+                    defaultCurrency: defaults ? defaults.currencyCode : defaultCurrency,
+                },
                 select: {
                     id: true,
                     email: true,

@@ -45,7 +45,8 @@ export function EditRecordModal({ groupId, transaction, isOpen, onClose }: Props
     const notes = meta.notes || '';
     const paymentDate = toIsoDateInput(meta.paymentDate || transaction?.timestamp);
     const amount = transaction?.amount != null ? String(transaction.amount) : '';
-    return { paymentMethod, referenceNumber, notes, paymentDate, amount };
+    const publishToMemberDashboard = true;
+    return { paymentMethod, referenceNumber, notes, paymentDate, amount, publishToMemberDashboard };
   }, [transaction]);
 
   const [form, setForm] = useState(initial);
@@ -73,6 +74,10 @@ export function EditRecordModal({ groupId, transaction, isOpen, onClose }: Props
         if (paymentMethod) updatePayload.paymentMethod = paymentMethod;
         if (form.referenceNumber !== undefined) updatePayload.referenceNumber = form.referenceNumber || null;
         if (form.notes !== undefined) updatePayload.notes = form.notes || null;
+
+        if (transaction?.metadata?.type === 'PERSONAL_SAVINGS') {
+          updatePayload.publishToMemberDashboard = !!form.publishToMemberDashboard;
+        }
 
         return contributionService.updateContribution(groupId, contributionId, updatePayload);
       }
@@ -133,6 +138,27 @@ export function EditRecordModal({ groupId, transaction, isOpen, onClose }: Props
           <p className="text-slate-400 text-xs mt-0.5">
             {String(t('admin.edit_record_desc', { defaultValue: 'Fix mistakes by saving a correction. A correction entry will be recorded for audit.' } as any))}
           </p>
+          {transaction?.member?.user?.fullName ? (
+            <div className="mt-3 p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold text-sm">
+                {transaction.member.user.fullName.charAt(0)}
+              </div>
+              <div>
+                <p className="text-xs text-indigo-300/70 font-bold uppercase tracking-widest">{t('common.member') || 'Member'}</p>
+                <p className="text-sm font-semibold text-indigo-100">{transaction.member.user.fullName}</p>
+              </div>
+            </div>
+          ) : transaction?.memberId ? (
+            <div className="mt-3 p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold text-sm">
+                ?
+              </div>
+              <div>
+                <p className="text-xs text-indigo-300/70 font-bold uppercase tracking-widest">{t('common.member') || 'Member'}</p>
+                <p className="text-sm font-semibold text-indigo-100">Unknown Member (ID: {transaction.memberId.substring(0,8)}...)</p>
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <form
@@ -200,6 +226,25 @@ export function EditRecordModal({ groupId, transaction, isOpen, onClose }: Props
             />
           </div>
 
+          {transaction?.transactionType === 'CONTRIBUTION' && transaction?.metadata?.type === 'PERSONAL_SAVINGS' ? (
+            <label className="flex items-center justify-between gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
+              <div>
+                <div className="text-[10px] font-black uppercase tracking-widest text-slate-300">
+                  {String(t('admin.publish_to_members', { defaultValue: 'Publish to members' } as any))}
+                </div>
+                <div className="text-[10px] text-slate-500 mt-0.5">
+                  {String(t('admin.publish_to_members_hint', { defaultValue: 'If off, members will not see this update until you publish it.' } as any))}
+                </div>
+              </div>
+              <input
+                type="checkbox"
+                className="w-4 h-4 rounded border-white/20 bg-transparent text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                checked={!!form.publishToMemberDashboard}
+                onChange={(e) => setForm((p) => ({ ...p, publishToMemberDashboard: e.target.checked }))}
+              />
+            </label>
+          ) : null}
+
           <div className="flex items-center justify-end gap-3 pt-2">
             <button
               type="button"
@@ -224,4 +269,3 @@ export function EditRecordModal({ groupId, transaction, isOpen, onClose }: Props
     </div>
   );
 }
-

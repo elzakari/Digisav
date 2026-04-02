@@ -28,9 +28,25 @@ export const contributionService = {
       paymentMethod?: string;
       referenceNumber?: string | null;
       notes?: string | null;
+      publishToMemberDashboard?: boolean;
     }
   ) {
     const response = await api.patch(`/groups/${groupId}/contributions/${contributionId}`, data);
+    return response.data.data;
+  },
+
+  async getPendingPublishes(groupId: string) {
+    const response = await api.get(`/groups/${groupId}/publish/pending`);
+    return response.data.data;
+  },
+
+  async publishMicroSavings(groupId: string, args: { publishAll?: boolean; transactionIds?: string[] }) {
+    const response = await api.post(`/groups/${groupId}/publish`, args);
+    return response.data.data;
+  },
+
+  async recalculateMicroSavingsBalances(groupId: string) {
+    const response = await api.post(`/groups/${groupId}/micro-savings/recalculate`, {});
     return response.data.data;
   },
 

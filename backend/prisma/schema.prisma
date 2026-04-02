@@ -208,6 +208,8 @@ model Transaction {
   hash            String          @db.VarChar(64)
   previousHash    String?         @db.VarChar(64)
   metadata        Json?
+  isPublished     Boolean         @default(true)
+  publishedAt     DateTime?
   createdAt       DateTime        @default(now())
   group           Group           @relation(fields: [groupId], references: [id])
   member          Member?         @relation(fields: [memberId], references: [id])
@@ -380,6 +382,8 @@ model SavingsDeposit {
   automationId    String?  @db.Uuid
   referenceNumber String?  @db.VarChar(100)
   notes           String?  @db.Text
+  isPublished     Boolean  @default(true)
+  publishedAt     DateTime?
   createdAt       DateTime @default(now())
 
   savingsGoal SavingsGoal        @relation(fields: [savingsGoalId], references: [id])

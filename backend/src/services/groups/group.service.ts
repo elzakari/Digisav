@@ -1,4 +1,4 @@
-import { PaymentFrequency, PayoutOrderType, ContributionStatus, GroupType, TransactionType } from '@prisma/client';
+import { PaymentFrequency, PayoutOrderType, ContributionStatus, GroupType, TransactionType, Prisma } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { NotFoundError, ForbiddenError, ValidationError } from '@/utils/errors';
 import { generateGroupPrefix, generateAccountNumber } from '@/utils/generators';
@@ -97,6 +97,7 @@ export class GroupService {
           },
         },
         members: {
+          where: { status: { not: 'INACTIVE' } },
           include: {
             user: {
               select: {
@@ -342,6 +343,9 @@ export class GroupService {
       const memberIdToUserId = new Map<string, string>();
       for (const m of activeMembers) memberIdToUserId.set(m.id, m.userId);
 
+      const userIdToMemberId = new Map<string, string>();
+      for (const m of activeMembers) userIdToMemberId.set(m.userId, m.id);
+
       const relevantTypes: TransactionType[] = [TransactionType.CONTRIBUTION, TransactionType.PAYOUT, TransactionType.ADJUSTMENT, TransactionType.FEE];
 
       const windowTx = await prisma.transaction.findMany({
@@ -354,6 +358,21 @@ export class GroupService {
         select: { memberId: true, transactionType: true, amount: true },
       });
 
+      const orphanWindowAdjustments = await prisma.transaction.findMany({
+        where: {
+          groupId,
+          timestamp: { gte: windowStart, lt: windowEnd },
+          transactionType: TransactionType.ADJUSTMENT,
+          memberId: null,
+          referenceId: { not: null },
+          metadata: {
+            path: ['type'],
+            equals: 'DEPOSIT_EDIT',
+          },
+        } as any,
+        select: { referenceId: true, amount: true },
+      });
+
       const allTimeTx = await prisma.transaction.findMany({
         where: {
           groupId,
@@ -362,6 +381,37 @@ export class GroupService {
         },
         select: { memberId: true, transactionType: true, amount: true },
       });
+
+      const orphanAllTimeAdjustments = await prisma.transaction.findMany({
+        where: {
+          groupId,
+          transactionType: TransactionType.ADJUSTMENT,
+          memberId: null,
+          referenceId: { not: null },
+          metadata: {
+            path: ['type'],
+            equals: 'DEPOSIT_EDIT',
+          },
+        } as any,
+        select: { referenceId: true, amount: true },
+      });
+
+      const orphanDepositIds = Array.from(
+        new Set(
+          [...orphanWindowAdjustments, ...orphanAllTimeAdjustments]
+            .map((t) => t.referenceId)
+            .filter(Boolean)
+        )
+      ) as string[];
+
+      const depositIdToUserId = new Map<string, string>();
+      if (orphanDepositIds.length > 0) {
+        const deposits = await prisma.savingsDeposit.findMany({
+          where: { id: { in: orphanDepositIds } },
+          select: { id: true, userId: true },
+        });
+        for (const d of deposits) depositIdToUserId.set(d.id, d.userId);
+      }
 
       const addByUser = (map: Map<string, number>, memberId: string | null, amount: number) => {
         if (!memberId) return;
@@ -379,6 +429,14 @@ export class GroupService {
         if (tx.transactionType === TransactionType.CONTRIBUTION || tx.transactionType === TransactionType.FEE) addByUser(depositsByUserId, tx.memberId, v);
         else if (tx.transactionType === TransactionType.PAYOUT) addByUser(withdrawalsByUserId, tx.memberId, v);
         else if (tx.transactionType === TransactionType.ADJUSTMENT) addByUser(adjustmentsByUserId, tx.memberId, v);
+      }
+
+      for (const tx of orphanWindowAdjustments) {
+        const depositUserId = tx.referenceId ? depositIdToUserId.get(tx.referenceId) : undefined;
+        if (!depositUserId) continue;
+        const memberId = userIdToMemberId.get(depositUserId);
+        if (!memberId) continue;
+        addByUser(adjustmentsByUserId, memberId, Number(tx.amount || 0));
       }
 
       const netDepositsByUserId = new Map<string, number>();
@@ -401,6 +459,17 @@ export class GroupService {
         balanceByUserId.set(uid, (balanceByUserId.get(uid) || 0) + effect);
       }
 
+      for (const tx of orphanAllTimeAdjustments) {
+        const depositUserId = tx.referenceId ? depositIdToUserId.get(tx.referenceId) : undefined;
+        if (!depositUserId) continue;
+        const memberId = userIdToMemberId.get(depositUserId);
+        if (!memberId) continue;
+        const uid = memberIdToUserId.get(memberId);
+        if (!uid) continue;
+        const v = Number(tx.amount || 0);
+        balanceByUserId.set(uid, (balanceByUserId.get(uid) || 0) + v);
+      }
+
       // Calculate total deposits independently from allTimeTx to match what is displayed everywhere else (net Deposits)
       let totalAllTimeDeposits = 0;
       for (const tx of allTimeTx) {
@@ -408,6 +477,13 @@ export class GroupService {
          if (tx.transactionType === TransactionType.CONTRIBUTION || tx.transactionType === TransactionType.FEE || tx.transactionType === TransactionType.ADJUSTMENT) {
            totalAllTimeDeposits += v;
          }
+      }
+
+      for (const tx of orphanAllTimeAdjustments) {
+        const depositUserId = tx.referenceId ? depositIdToUserId.get(tx.referenceId) : undefined;
+        if (!depositUserId) continue;
+        if (!userIdToMemberId.has(depositUserId)) continue;
+        totalAllTimeDeposits += Number(tx.amount || 0);
       }
 
       const netGroupBalance = Array.from(balanceByUserId.values()).reduce((a, b) => a + b, 0);
@@ -825,7 +901,7 @@ export class GroupService {
     return updated;
   }
 
-  async getUserGroups(userId: string) {
+  async getUserGroups(userId: string, userRole?: string) {
     const groups = await prisma.group.findMany({
       where: {
         status: { not: 'DELETED' },
@@ -855,18 +931,36 @@ export class GroupService {
     const groupIds = groups.map((g) => g.id);
     if (groupIds.length === 0) return groups;
 
-    const collectedByGroup = await prisma.transaction.groupBy({
-      by: ['groupId'],
-      where: {
-        groupId: { in: groupIds },
-        transactionType: { in: [TransactionType.CONTRIBUTION, TransactionType.FEE, TransactionType.ADJUSTMENT] },
-      },
-      _sum: { amount: true },
-    });
-
     const collectedMap = new Map<string, number>();
-    for (const row of collectedByGroup) {
-      collectedMap.set(row.groupId, Number(row._sum.amount || 0));
+
+    if (userRole === 'MEMBER') {
+      const rows = await prisma.$queryRaw<Array<{ groupId: string; total: any }>>(
+        Prisma.sql`
+          SELECT "groupId", COALESCE(SUM("amount"), 0) AS total
+          FROM "transactions"
+          WHERE "groupId"::text IN (${Prisma.join(groupIds)})
+            AND "transactionType" IN ('CONTRIBUTION', 'FEE', 'ADJUSTMENT')
+            AND "isPublished" = true
+          GROUP BY "groupId"
+        `
+      );
+
+      for (const row of rows) {
+        collectedMap.set(row.groupId, Number(row.total || 0));
+      }
+    } else {
+      const collectedByGroup = await prisma.transaction.groupBy({
+        by: ['groupId'],
+        where: {
+          groupId: { in: groupIds },
+          transactionType: { in: [TransactionType.CONTRIBUTION, TransactionType.FEE, TransactionType.ADJUSTMENT] },
+        },
+        _sum: { amount: true },
+      });
+
+      for (const row of collectedByGroup) {
+        collectedMap.set(row.groupId, Number(row._sum.amount || 0));
+      }
     }
 
     return groups.map((g: any) => ({
